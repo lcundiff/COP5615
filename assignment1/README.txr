@@ -1,13 +1,25 @@
 Size of the work unit that you determined results in the best performance for your implementation and an explanation of how you determined it. 
 The size of the work unit refers to the number of sub-problems that a worker gets in a single request from the boss.
 - 
+- I started the work unit by generating blocks of 100 strings that were 50 characters long each with 3 actors running in parrallel
+- I computed the average times (real) to compare by generating the test 10 times on finding 4 leading 0s. I then made my adjustments based off whether time increased of decreased. 
+- The average went from 657ms to 544ms upon lowering the random strings from length of 50 to 20
+- From there I increased work unit of string count from 100 to 500 which resulted in my average time increasing to 965ms
+- Since adding more work to the generator increased time, I decreased the work from 100 to 20 and decreased my average to 357
+- I tested out how many actors to divide the work units into by lowering the actors from 3 to 1 which increased my average time to 520ms
+- Increasing actors beyond three did not lower the real time, but it actually raised it approximately to 420ms. However the CPU to REAL time ratio went from 3:1 to 4:1 which shows more cores were being utilized.
+- since using more cores did not speed up the calculations significantly, I concluded that the work unit was too large, and reduced it by further lowering my string count to 25 (from 100)
+- This resulted in significant decrease in time to approximately 250ms and a CPU to REAL ratio of 4:1 (utilizing all 4 cores)
+- increasing the actors used did not further descrease time siginficantly. So this was my final work unit. 
+
 The result of running your program for input 4
-- CPU time ~= 500ms
-- Real time ~150ms
+- CPU time ~= 1000ms
+- Real time ~350ms
 
 The ratio of CPU time to REAL TIME tells you how many cores were effectively used in the computation.  
-- ~ 3:1
+- ~ 4:1
+
 The coin with the most 0s you managed to find.
-- 6
+- 7: 0000000E6CFB0F94B16913EB1A053A859C0A6C6AE4F679FB8006D66BACDA254B
 The largest number of working machines you were able to run your code with.
 - 1

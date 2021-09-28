@@ -7,17 +7,18 @@ open System.Diagnostics
 #r "nuget: Akka.TestKit" 
 open Akka.Configuration
 open Akka.FSharp
-//open Akka.Actor
+open Akka.Actor
 
 let system = System.create "my-system" <| ConfigurationFactory.Default()
+
 
 type Message =
     | Stop
     | HashBrown
-    | Coin of string
+    | Coin of string * string
     | Start of string
     | ListOfStrings of string * string
-    | Mine of string * string * string * string
+    | Mine of string * string * string * string * string * string
 
 printfn "input ready"
 let input = Console.ReadLine() 
@@ -62,7 +63,7 @@ let generateRandomString (ufid:string) =
     let charsLen = chars.Length
     let random = Random()
     // build a string of size 50
-    let randomChars = [| for i in 0..25 -> chars.[random.Next(charsLen)] |]
+    let randomChars = [| for i in 0..20 -> chars.[random.Next(charsLen)] |]
     let newString = ufid + String(randomChars)
     //printf "%s " newString 
     newString
@@ -109,7 +110,7 @@ let kidMiner = spawn system "kidMiner" <| fun mailbox ->
                     if (coin.Length > 0)
                     then 
                         //printfn "here"
-                        sender <! Coin coin
+                        sender <! Coin(coin, str)
                     //else 
                     //    printfn "no coin"
                     //    sender <! Mine msg
@@ -124,26 +125,16 @@ let kidMiner2 = spawn system "kidMiner2" <| fun mailbox ->
         let rec loop() = actor {
             let! msg = mailbox.Receive()
             let sender = mailbox.Sender() 
-
-            //let preHashBrown = generateRandomString "62919511"
-
             match msg with
             | ListOfStrings (zeros,randomString) -> 
-                //printfn "mine until we get this many leading 0s: %s" zeros
                 let splitLine = (fun (line : string) -> Seq.toList (line.Split ','))
                 let randomStrings = splitLine randomString
 
                 for str in randomStrings do
-                    //printfn "random string: %s" str 
-                    //printfn "%A" randomString
                     let coin = getCoin zeros str
                     if (coin.Length > 0)
                     then 
-                        //printfn "here"
-                        sender <! Coin coin
-                    //else 
-                    //    printfn "no coin"
-                    //    sender <! Mine msg
+                        sender <! Coin(coin, str)
             | _ -> printfn "wut" 
 
             // handle an incoming message
@@ -155,28 +146,50 @@ let kidMiner3 = spawn system "kidMiner3" <| fun mailbox ->
         let rec loop() = actor {
             let! msg = mailbox.Receive()
             let sender = mailbox.Sender() 
-
-            //let preHashBrown = generateRandomString "62919511"
-
             match msg with
             | ListOfStrings (zeros,randomString) -> 
-                //printfn "mine until we get this many leading 0s: %s" zeros
                 let splitLine = (fun (line : string) -> Seq.toList (line.Split ','))
                 let randomStrings = splitLine randomString
-
                 for str in randomStrings do
                     //printfn "random string: %s" str 
                     let coin = getCoin zeros str
                     if (coin.Length > 0)
-                    then 
-                        //printfn "here"
-                        sender <! Coin coin
-                    //else 
-                    //    printfn "no coin"
-                    //    sender <! Mine msg
+                    then sender <! Coin(coin, str)
             | _ -> printfn "wut" 
-
-            // handle an incoming message
+            return! loop()
+        }
+        loop()
+let kidMiner4 = spawn system "kidMiner4" <| fun mailbox ->
+        let rec loop() = actor {
+            let! msg = mailbox.Receive()
+            let sender = mailbox.Sender() 
+            match msg with
+            | ListOfStrings (zeros,randomString) -> 
+                let splitLine = (fun (line : string) -> Seq.toList (line.Split ','))
+                let randomStrings = splitLine randomString
+                for str in randomStrings do
+                    //printfn "random string: %s" str 
+                    let coin = getCoin zeros str
+                    if (coin.Length > 0)
+                    then sender <! Coin(coin, str)
+            | _ -> printfn "wut" 
+            return! loop()
+        }
+        loop()
+let kidMiner5 = spawn system "kidMiner5" <| fun mailbox ->
+        let rec loop() = actor {
+            let! msg = mailbox.Receive()
+            let sender = mailbox.Sender() 
+            match msg with
+            | ListOfStrings (zeros,randomString) -> 
+                let splitLine = (fun (line : string) -> Seq.toList (line.Split ','))
+                let randomStrings = splitLine randomString
+                for str in randomStrings do
+                    //printfn "random string: %s" str 
+                    let coin = getCoin zeros str
+                    if (coin.Length > 0)
+                    then sender <! Coin(coin, str)
+            | _ -> printfn "wut" 
             return! loop()
         }
         loop()
@@ -186,29 +199,26 @@ let hashSlingingSlasher =
             let rec loop() = actor {
                 let! msg = mailbox.Receive()
                 let sender = mailbox.Sender() 
-                let mutable listOfStrings = generateRandomString "62919511;strange"
-                //printfn "hashing. leading 0s: %s" msg
-                for i in 0 .. 50 do
-                    let randomString = generateRandomString "62919511;strange"
-                    listOfStrings <- listOfStrings + "," + randomString
-                    //let randomString2 = generateRandomString "62919511"
-                    //let randomString3 = generateRandomString "62919511"
-                
-                let mutable listOfStrings2 = generateRandomString "62919511;weird"
-                for i in 0 .. 50 do
-                    let randomString = generateRandomString "62919511;weird"
-                    listOfStrings2 <- listOfStrings2 + "," + randomString
-                    //let randomString2 = generateRandomString "62919511"
-                    //let randomString3 = generateRandomString "62919511"
-                
-                let mutable listOfStrings3 = generateRandomString "62919511;random"
-                for i in 0 .. 50 do
-                    let randomString = generateRandomString "62919511;random"
-                    listOfStrings3 <- listOfStrings3 + "," + randomString
-                    //let randomString2 = generateRandomString "62919511"
-                    //let randomString3 = generateRandomString "62919511"
+                let mutable listOfStrings = generateRandomString "62919511;"
+                let mutable listOfStrings2 = generateRandomString "62919511;"
+                let mutable listOfStrings3 = generateRandomString "62919511;"
+                let mutable listOfStrings4 = generateRandomString "62919511;"
+                let mutable listOfStrings5 = generateRandomString "62919511;"
 
-                sender <! Mine (msg, listOfStrings,listOfStrings2,listOfStrings3)
+                //printfn "hashing. leading 0s: %s" msg
+                for i in 0 .. 25 do
+                    let randomString = generateRandomString "62919511;"
+                    listOfStrings <- listOfStrings + "," + randomString
+                    let randomString2 = generateRandomString "62919511;"
+                    listOfStrings2 <- listOfStrings2 + "," + randomString2
+                    let randomString3 = generateRandomString "62919511;"
+                    listOfStrings3 <- listOfStrings3 + "," + randomString3
+                    let randomString4 = generateRandomString "62919511;"
+                    listOfStrings4 <- listOfStrings4 + "," + randomString4
+                    let randomString5 = generateRandomString "62919511;"
+                    listOfStrings5 <- listOfStrings5 + "," + randomString5
+
+                sender <! Mine (msg, listOfStrings,listOfStrings2,listOfStrings3,listOfStrings4,listOfStrings5)
                 sender <! HashBrown
 
                 return! loop()
@@ -227,7 +237,7 @@ let boss =
                         
             match msg with
             | Start input -> leadingZeros <- input //hashSlingingSlasher <! input //leadingZeros := input
-            | Mine (zeros, randomStrings1, randomStrings2, randomStrings3) -> 
+            | Mine (zeros, randomStrings1, randomStrings2, randomStrings3,randomStrings4,randomStrings5) -> 
                 //printfn "mining queue"
                 //printfn "mining: %b" mining
                 if(mining)
@@ -235,23 +245,25 @@ let boss =
                     kidMiner <! ListOfStrings(zeros,randomStrings1)
                     kidMiner2 <! ListOfStrings(zeros,randomStrings2)
                     kidMiner3 <! ListOfStrings(zeros,randomStrings3)
-                else printfn "stop mining"
+                    kidMiner4 <! ListOfStrings(zeros,randomStrings4)
+                    kidMiner5 <! ListOfStrings(zeros,randomStrings5)
+                else printfn ""
             | HashBrown -> 
                 //printfn "hasbrown queue" // %b" mining
                 if(mining) // \!mining is dereference
                 then 
                     hashSlingingSlasher <! leadingZeros
-                else printfn "stop string generation"
-            | Coin coinString -> 
-                printfn "coin: %s" coinString
+                else printfn ""
+            | Coin(coinString,hash) -> 
                 //mining := false
                 //mining.Value <- false
                 //printfn "mining: %b" mining.Value
                 mining <- false //
                 let cpuTime = (proc.TotalProcessorTime-cpu_time_stamp).TotalMilliseconds
                 sw.Stop()
-                printfn "CPU time = %dms" (int64 cpuTime)
-                printfn "REAL time = %fms" sw.Elapsed.TotalMilliseconds
+                printfn "%s   %s" hash coinString
+                //printfn "CPU time = %dms" (int64 cpuTime)
+                //printfn "REAL time = %fms" sw.Elapsed.TotalMilliseconds
                 mailbox.Context.System.Terminate() |> ignore
                 
                 //printfn "mining: %b" mining
@@ -261,7 +273,7 @@ let boss =
 
             //kidMiner <! preHashBrown
         ))
-        
+printfn "%s" input        
 boss <! Start input
 boss <! HashBrown
 
