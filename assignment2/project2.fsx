@@ -142,8 +142,8 @@ let find3dNeighbor (x:int) (y:int) (z:int) =
     let secondIndex = neighbor.[1]   
     let thirdIndex = neighbor.[2]   
 
-    let gridOfActors = cubeOfActors.[firstIndex] // first index as index into cube
-    let listOfActors = gridOfActors.[secondIndex]
+    let gridOfActors : _ list = cubeOfActors.[firstIndex] // first index as index into cube
+    let listOfActors : _ list = gridOfActors.[secondIndex]
     let actor = listOfActors.[thirdIndex]
     actor
     //cubeOfActors.[neighbor.[0]][neighbor.[1]][neighbor.[2]] // return actor neighbor
