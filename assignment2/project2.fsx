@@ -38,6 +38,32 @@ let mutable listOfActors = []//[0..inputParams.[0] |> int] // list of actors as 
 let mutable cubeOfActors = []
 let allActors = Map.empty
 let mutable numOfNodes = 0; 
+
+let gossipActor (neighbors: int[]) (mailbox : Actor<_>) (*(mailbox: Actor<_>)*) =
+
+    let mutable counter = 0
+    let rand = Random()
+    rand.Next(0, neighbors.Length) |> ignore
+
+    let rec loop () = 
+       
+       actor {
+
+            let! msg = mailbox.Receive()
+            let index = rand.Next(0, neighbors.Length) |> int  
+            let target = neighbors.[index]
+            target <! msg
+            counter <- counter + 1
+
+            if counter < 50 then
+                if counter = 1 then
+                    mailbox.Context.Parent <! msg
+                return! loop()
+
+
+    }
+    loop()
+
 let pushSum (name:string) = spawn system name <| fun mailbox ->
         //let mutable keepMessaging = true
         let rec loop(s,w, count) = actor {
@@ -170,6 +196,42 @@ let addNodesInCube nodes =
 let boss = 
     spawn system "boss" 
         (actorOf2 (fun mailbox msg ->
+        
+            let refArr =
+        [|
+        for i in 0 .. nodes-1 -> 
+            (spawn mailbox ("actor"+i.ToString()) (gossipActor (neighbors.Item(i))))
+        |]
+
+    let mutable actorRef : IActorRef list = []
+    
+    let rnd = Random().Next(0, neighbors.Count)
+    
+    for i in 0 .. refArr.Length do
+        actorRef <- actorRef @ [refArr.[i]]
+    
+    actorRef.[rnd] <! rumor
+
+    let mutable rumorCount = 0
+    let mutable actorIs = mailbox.Context.Parent
+
+
+    let rec loop () = 
+        actor {
+            let! message = mailbox.Receive()
+            let sender = mailbox.Sender()
+            if actorIs = mailbox.Context.Parent then
+                actorIs <- sender
+                return! loop()
+            else
+                rumorCount <- rumorCount + 1
+                if rumorCount < 20 then
+                    return! loop()
+                else
+                    Console.WriteLine ("All nodes have received the rumor!")
+                    actorIs <! "Finished"
+        }
+    loop ()
             
             match msg with
             | StartSum (nodes, topology) -> 
@@ -180,12 +242,18 @@ let boss =
                     | "3D Grid Random" -> addNodesInCube(numOfNodes) 
                     | _ -> addNodesInArray(numOfNodes)  // append     
                 
- 
+                    
+                    //List.map(spawn system (i |> string)) |> ignore
+                    
+                //allActors |> List.iter (fun item -> 
+                //    item <! Tuple(0,0,0))
+                //printfn "name: %A" allActors
                 let random = Random()
                 let randomNum = random.Next(nodes) // randomly choose actor to start with
                 listOfActors.[randomNum] <! FirstMessage(nodes) // s = i, w = 1
             | Stop -> mailbox.Context.System.Terminate() |> ignore
-            | _ -> printfn "here"            
+            | _ -> printfn "here"   
+            
         ))
 //printfn "%s" inputParams.[0] // should be number of nodes
 let alg = inputParams.[2]
