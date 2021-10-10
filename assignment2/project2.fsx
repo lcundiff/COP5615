@@ -213,6 +213,44 @@ let addNodesInCube nodes =
         let gridOfActors2 = [gridOfActors] 
         cubeOfActors <- List.append cubeOfActors gridOfActors2 // append grid for each layer of depth
     
+    
+let boss2 (nodes: int) (mailbox: Actor<_>) rumor =
+    
+    let refArr =
+        [|
+        for i in 0 .. nodes-1 -> 
+            (spawn mailbox ("actor"+i.ToString()) (gossipActor (neighbors.Item(i))))
+        |]
+
+    let mutable actorRef : IActorRef list = []
+    
+    let rnd = Random().Next(0, neighbors.Count)
+    
+    for i in 0 .. refArr.Length do
+        actorRef <- actorRef @ [refArr.[i]]
+    
+    actorRef.[rnd] <! rumor
+
+    let mutable rumorCount = 0
+    let mutable actorIs = mailbox.Context.Parent
+
+
+    let rec loop () = 
+        actor {
+            let! message = mailbox.Receive()
+            let sender = mailbox.Sender()
+            if actorIs = mailbox.Context.Parent then
+                actorIs <- sender
+                return! loop()
+            else
+                rumorCount <- rumorCount + 1
+                if rumorCount < 20 then
+                    return! loop()
+                else
+                    Console.WriteLine ("All nodes have received the rumor!")
+                    actorIs <! "Finished"
+        }
+    loop ()
 
 let boss = 
     spawn system "boss" 
