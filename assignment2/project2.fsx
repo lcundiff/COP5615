@@ -180,12 +180,7 @@ let boss =
                     | "3D Grid Random" -> addNodesInCube(numOfNodes) 
                     | _ -> addNodesInArray(numOfNodes)  // append     
                 
-                    
-                    //List.map(spawn system (i |> string)) |> ignore
-                    
-                //allActors |> List.iter (fun item -> 
-                //    item <! Tuple(0,0,0))
-                //printfn "name: %A" allActors
+ 
                 let random = Random()
                 let randomNum = random.Next(nodes) // randomly choose actor to start with
                 listOfActors.[randomNum] <! FirstMessage(nodes) // s = i, w = 1
