@@ -88,6 +88,29 @@ let findLineNeighbor (index: int) =
     actor
     //cubeOfActors.[neighbor.[0]][neighbor.[1]][neighbor.[2]] // return actor neighbor
 
+let gossipActor (neighbors: int[]) (mailbox : Actor<_>) (*(mailbox: Actor<_>)*) =
+
+    let mutable counter = 0
+    let rand = Random()
+    rand.Next(0, neighbors.Length) |> ignore
+
+    let rec loop () = 
+       
+       actor {
+
+            let! msg = mailbox.Receive()
+            let index = rand.Next(0, neighbors.Length) |> int  
+            let target = neighbors.[index]
+            target <! msg
+            counter <- counter + 1
+
+            if counter < 50 then
+                if counter = 1 then
+                    mailbox.Context.Parent <! msg
+                return! loop()
+
+    }
+    loop()
 
 let pushSum (name:string) = spawn system name <| fun mailbox ->
         //let mutable keepMessaging = true
@@ -194,10 +217,21 @@ let addNodesInCube nodes =
 let boss = 
     spawn system "boss" 
         (actorOf2 (fun mailbox msg ->
-
             match msg with
             | StartSum (nodes, topology) -> 
                 numOfNodes <- nodes 
+                match topology with
+                    | "line" -> addNodesInArray(numOfNodes)  
+                    | "3D Grid" -> addNodesInCube(numOfNodes)
+                    | "3D Grid Random" -> addNodesInCube(numOfNodes) 
+                    | _ -> addNodesInArray(numOfNodes)  // append     
+                
+                    
+                    //List.map(spawn system (i |> string)) |> ignore
+                    
+                //allActors |> List.iter (fun item -> 
+                //    item <! Tuple(0,0,0))
+                //printfn "name: %A" allActors
                 let random = Random()
                 let randomNum = random.Next(nodes) // randomly choose actor to start with
                 match topology with
@@ -214,7 +248,8 @@ let boss =
                         addNodesInArray(numOfNodes)  // append  
                         listOfActors.[randomNum] <! FirstMessage(nodes) // s = i, w = 1    
             | Stop -> mailbox.Context.System.Terminate() |> ignore
-            | _ -> printfn "here"            
+            | _ -> printfn "here"   
+            
         ))
 //printfn "%s" inputParams.[0] // should be number of nodes
 
