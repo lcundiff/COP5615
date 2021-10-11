@@ -1453,9 +1453,9 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "/home/logancundiff/Documents/GitHub/COP5615/assignment2/assignment1.fsproj",
-      "projectName": "assignment1",
-      "projectPath": "/home/logancundiff/Documents/GitHub/COP5615/assignment2/assignment1.fsproj",
+      "projectUniqueName": "/home/logancundiff/Documents/GitHub/COP5615/assignment2/assignment2.fsproj",
+      "projectName": "assignment2",
+      "projectPath": "/home/logancundiff/Documents/GitHub/COP5615/assignment2/assignment2.fsproj",
       "packagesPath": "/home/logancundiff/.nuget/packages/",
       "outputPath": "/home/logancundiff/Documents/GitHub/COP5615/assignment2/obj/",
       "projectStyle": "PackageReference",

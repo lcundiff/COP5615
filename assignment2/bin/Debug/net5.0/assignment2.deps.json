@@ -6,13 +6,13 @@
   "compilationOptions": {},
   "targets": {
     ".NETCoreApp,Version=v5.0": {
-      "assignment1/1.0.0": {
+      "assignment2/1.0.0": {
         "dependencies": {
           "Akka.FSharp": "1.4.25",
           "FSharp.Core": "5.0.0"
         },
         "runtime": {
-          "assignment1.dll": {}
+          "assignment2.dll": {}
         }
       },
       "Akka/1.4.25": {
@@ -301,7 +301,7 @@
     }
   },
   "libraries": {
-    "assignment1/1.0.0": {
+    "assignment2/1.0.0": {
       "type": "project",
       "serviceable": false,
       "sha512": ""

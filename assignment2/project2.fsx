@@ -12,7 +12,6 @@ open Akka.Actor
 
 let system = System.create "my-system" <| ConfigurationFactory.Default()
 
-
 type Message =
     | Stop
     | StartSum of int * string
@@ -24,22 +23,18 @@ printfn "input ready"
 let inputLine = Console.ReadLine() 
 let splitLine = (fun (line : string) -> Seq.toList (line.Split ' '))
 let inputParams = splitLine inputLine
-let alg = inputParams.[2]
+let numOfNodes = inputParams.[0] |> int
 let topology = inputParams.[1]
+let alg = inputParams.[2]
 
 let proc = Process.GetCurrentProcess()
 let cpu_time_stamp = proc.TotalProcessorTime
 let sw = Stopwatch.StartNew()
 
-
-
-
-
 let mutable listOfActors = []//[0..inputParams.[0] |> int] // list of actors as long as the nodes inputted
 //let mutable gridOfActors = [listOfActors]
 let mutable cubeOfActors = []
 let allActors = Map.empty
-let mutable numOfNodes = 0; 
 
 let find3dNeighbor (index: int list) = 
     (*let neighbor1 = [x-1,y,z]
@@ -51,24 +46,34 @@ let find3dNeighbor (index: int list) =
     
     // which axis to find neighbor on
     let random = Random()
-    let randomAxisIndex = random.Next(3)
-    let mutable axis = index.[randomAxisIndex] 
-    let randomDirection = random.Next(1)
+    let mutable properIndexFound = false
+    let mutable firstIndex = 0
+    let mutable secondIndex = 0
+    let mutable thirdIndex = 0
 
-    // which direction 
-    if randomDirection = 1
-    then axis <- axis + 1
-    else axis <- axis - 1 
-
-    //let pos, value = int (index.[0]), int (index.[1])
-    let neighbor = index |> List.mapi (fun i v -> if i = randomAxisIndex then axis else v) 
-    let firstIndex = neighbor.[0]   
-    let secondIndex = neighbor.[1]   
-    let thirdIndex = neighbor.[2]   
+    while not properIndexFound do // loop until we are not index out of bounds
+        let randomAxisIndex = random.Next(3)
+        let mutable axisIndex = index.[randomAxisIndex] 
+        let randomDirection = random.Next(2) // direction will either be 0 or 1 (forward/backward on axis)
+        // which direction 
+        if randomDirection = 1
+        then axisIndex <- axisIndex + 1
+        else axisIndex <- axisIndex - 1 
+        let neighbor = index |> List.mapi (fun i v -> if i = randomAxisIndex then axisIndex else v) 
+        firstIndex <- neighbor.[0]   
+        secondIndex <- neighbor.[1]   
+        thirdIndex <-  neighbor.[2] 
+        let cubeLength = Math.Cbrt(numOfNodes |> float) |> int
+        //printfn "index1: %d index2: %d index3: %d" randomDirection secondIndex thirdIndex
+        if (firstIndex < cubeLength && firstIndex >= 0 && secondIndex < cubeLength && secondIndex >= 0 && thirdIndex < cubeLength && thirdIndex >= 0)
+        then 
+            properIndexFound <- true 
+        else 
+            properIndexFound <- false // i know this is pointless  
 
     let gridOfActors : _ list = cubeOfActors.[firstIndex] // first index as index into cube
-    let listOfActors : _ list = gridOfActors.[secondIndex]
-    let actor = listOfActors.[thirdIndex]
+    let rowOfActors : _ list = gridOfActors.[secondIndex]
+    let actor = rowOfActors.[thirdIndex]
     actor
     //cubeOfActors.[neighbor.[0]][neighbor.[1]][neighbor.[2]] // return actor neighbor
 
@@ -97,22 +102,19 @@ let gossipActor (neighbors: int[]) (mailbox : Actor<_>) (*(mailbox: Actor<_>)*) 
     let rec loop () = 
        
        actor {
-
             let! msg = mailbox.Receive()
             let index = rand.Next(0, neighbors.Length) |> int  
             let target = neighbors.[index]
-            target <! msg
+            //target <! msg
             counter <- counter + 1
-
             if counter < 50 then
                 if counter = 1 then
                     mailbox.Context.Parent <! msg
                 return! loop()
-
     }
     loop()
 
-let pushSum (name:string) = spawn system name <| fun mailbox ->
+let pushSum (name:string) (topologyPosition:int list) = spawn system name <| fun mailbox ->
         //let mutable keepMessaging = true
         let rec loop(s,w, count,(position: int list)) = actor {
             let! msg = mailbox.Receive()
@@ -121,15 +123,30 @@ let pushSum (name:string) = spawn system name <| fun mailbox ->
             let mutable localW = w
             let mutable counter = count
             let mutable position = position
-
-
+            let random = Random()
+            
             match msg with
             | FirstMessage numOfNodes -> 
-                let random = Random()
                 let randomNum = random.Next(numOfNodes) // randomly choose actor to send to
                 localW <- localW/2.0 // keep half and send half
                 localS <- localS/2.0
-                listOfActors.[randomNum] <! (Tuple(localS,localW)) // send half of s and w to next actor            
+                match topology with
+                    | "line" -> 
+                        let neighborActor = findLineNeighbor(position.[0])  
+                        //printfn "calling actor: %d" randomNum
+                        neighborActor <! (Tuple(localS,localW)) // send half of s and w to next actor
+                    | "3D" -> 
+                        //printfn "calling actor @ %A" position 
+                        let neighborActor = find3dNeighbor(position)
+                        //system.Scheduler.ScheduleTellRepeatedly(TimeSpan.FromSeconds(5.), TimeSpan.FromSeconds(10.), neighborActor, ())
+                        neighborActor <! (Tuple(localS,localW)) // send half of s and w to next actor
+                    | "imp3D" -> 
+                        let neighborActor = find3dNeighbor(position) 
+                        neighborActor <! (Tuple(localS,localW)) // send half of s and w to next actor
+                        printfn "imperfect 3D"
+                    | _ -> 
+                        printfn "here"
+                        listOfActors.[randomNum] <! (Tuple(localS,localW)) // send half of s and w to next actor  
             | Tuple (recievedS,recievedW) -> 
                 //printfn "local s: %f" localS
                 //printfn "recieved s: %f" recievedS
@@ -138,7 +155,6 @@ let pushSum (name:string) = spawn system name <| fun mailbox ->
                 
                 localS <- localS/2.0; // keep half
                 localW <- localW/2.0;
-                let random = Random()
                 //printfn "len: %d" listOfActors.Length
                 //printfn "local s again: %f " localS
                 let randomNum = random.Next(numOfNodes) // randomly choose actor to send to
@@ -150,10 +166,11 @@ let pushSum (name:string) = spawn system name <| fun mailbox ->
                             let neighborActor = findLineNeighbor(position.[0])  
                             //printfn "calling actor: %d" randomNum
                             neighborActor <! (Tuple(localS,localW)) // send half of s and w to next actor
-                        | "3D Grid" -> 
+                        | "3D" -> 
                             let neighborActor = find3dNeighbor(position)
+                            //printfn "calling actor @ %A" position 
                             neighborActor <! (Tuple(localS,localW)) // send half of s and w to next actor
-                        | "3D Grid Random" -> 
+                        | "imp3D" -> 
                             let neighborActor = find3dNeighbor(position) 
                             neighborActor <! (Tuple(localS,localW)) // send half of s and w to next actor
                         | _ -> listOfActors.[randomNum] <! (Tuple(localS,localW)) // send half of s and w to next actor         
@@ -172,12 +189,13 @@ let pushSum (name:string) = spawn system name <| fun mailbox ->
             if ( (diff) < minimumDiff )
             then counter <- counter + 1
             else
-                printfn "diff: %.10f" diff
+                //printfn "diff: %.10f" diff
                 counter <- 0
 
             if counter > 2
             then 
                 printfn "actor: %s terminating" name
+                printfn "diff: %.10f" diff
                 //keepMessaging <- false
                 mailbox.Context.System.Terminate() |> ignore
            
@@ -185,27 +203,29 @@ let pushSum (name:string) = spawn system name <| fun mailbox ->
             return! loop(localS,localW,counter,position) // store the new s,w into the next state of the actor
         }
         let initialS = name |> float
-        //printfn "initial s: %d" initialS
-        loop(initialS,1.0,0,[0;0;0]) // all actors start out with an s and w value that is maintained 
+        //printfn "actor: %s is at initial position: %A" name topologyPosition
+        loop(initialS,1.0,0,topologyPosition) // all actors start out with an s and w value that is maintained 
 
 let addNodesInArray nodes = 
     for i in 1..nodes do 
         let name = i |> string
-        let actor = [pushSum(name)]
+        let actor = [pushSum name [i]]
         listOfActors <- List.append listOfActors actor  // append 
 
 let addNodesInCube nodes = 
     let cubeLength = Math.Cbrt(nodes |> float) |> int
-    for grid in 1..cubeLength do 
+    printfn "cube length %d" cubeLength
+    for grid in 0..cubeLength-1 do 
         let mutable gridOfActors = [] // make a new grid
-        for row in 1..cubeLength do 
+        let gridNum = grid |> string 
+        for row in 0..cubeLength-1 do 
             let mutable rowOfActors = []
-            for cell in 1..cubeLength do
-                let rowNum = row |> string
+            let rowNum = row |> string
+            for cell in 0..cubeLength-1 do
                 let cellNum = cell |> string
-                let gridNum = grid |> string 
-                let actorName = rowNum + cellNum + gridNum 
-                let actor = [pushSum(actorName)]
+                let actorName = gridNum + rowNum + cellNum
+                //printfn "position: %s" actorName
+                let actor = [pushSum actorName [grid;row;cell]]
                 rowOfActors <- List.append rowOfActors actor  // append actor 
             let rowOfActors2 = [rowOfActors]
             gridOfActors <- List.append gridOfActors rowOfActors2 // append row of actors 
@@ -217,21 +237,8 @@ let addNodesInCube nodes =
 let boss = 
     spawn system "boss" 
         (actorOf2 (fun mailbox msg ->
-            match msg with
+            match msg with  
             | StartSum (nodes, topology) -> 
-                numOfNodes <- nodes 
-                match topology with
-                    | "line" -> addNodesInArray(numOfNodes)  
-                    | "3D Grid" -> addNodesInCube(numOfNodes)
-                    | "3D Grid Random" -> addNodesInCube(numOfNodes) 
-                    | _ -> addNodesInArray(numOfNodes)  // append     
-                
-                    
-                    //List.map(spawn system (i |> string)) |> ignore
-                    
-                //allActors |> List.iter (fun item -> 
-                //    item <! Tuple(0,0,0))
-                //printfn "name: %A" allActors
                 let random = Random()
                 let randomNum = random.Next(nodes) // randomly choose actor to start with
                 match topology with
@@ -239,11 +246,15 @@ let boss =
                         addNodesInArray(numOfNodes) 
                         listOfActors.[randomNum] <! FirstMessage(nodes) // s = i, w = 1 
                     | "3D" -> 
+                        printfn "3D topology"
                         addNodesInCube(numOfNodes)
-                        cubeOfActors.[0].[0].[0] <! FirstMessage(nodes)
+                        let gridOfActors : _ list = cubeOfActors.[0] // first index as index into cube
+                        let listOfActors : _ list = gridOfActors.[0]
+                        let actor = listOfActors.[0]                        
+                        actor <! FirstMessage(nodes)
                     | "imp3D" -> 
                         addNodesInCube(numOfNodes) 
-                        cubeOfActors.[0].[0].[0] <! FirstMessage(nodes)
+                        cubeOfActors.[randomNum].[0].[0] <! FirstMessage(nodes)
                     | _ -> 
                         addNodesInArray(numOfNodes)  // append  
                         listOfActors.[randomNum] <! FirstMessage(nodes) // s = i, w = 1    
