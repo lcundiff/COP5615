@@ -45,12 +45,12 @@ let find3dNeighbor (index: int list) =
     
     // which axis to find neighbor on
     let random = Random()
-    let mutable properIndexFound = false
+    let mutable properIndexNotFound = true
     let mutable firstIndex = 0
     let mutable secondIndex = 0
     let mutable thirdIndex = 0
 
-    while not properIndexFound do // loop until we are not index out of bounds
+    while properIndexNotFound do // loop until we are not index out of bounds
         let randomAxisIndex = random.Next(3)
         let mutable axisIndex = index.[randomAxisIndex] 
         let randomDirection = random.Next(2) // direction will either be 0 or 1 (forward/backward on axis)
@@ -66,9 +66,9 @@ let find3dNeighbor (index: int list) =
         //printfn "index1: %d index2: %d index3: %d" randomDirection secondIndex thirdIndex
         if (firstIndex < cubeLength && firstIndex >= 0 && secondIndex < cubeLength && secondIndex >= 0 && thirdIndex < cubeLength && thirdIndex >= 0)
         then 
-            properIndexFound <- true 
+            properIndexNotFound <- false 
         else 
-            properIndexFound <- false // i know this is pointless  
+            properIndexNotFound <- true // i know this is pointless  
 
     let gridOfActors : _ list = cubeOfActors.[firstIndex] // first index as index into cube
     let rowOfActors : _ list = gridOfActors.[secondIndex]
@@ -143,17 +143,17 @@ let pushSum (name:string) (topologyPosition:int list) = spawn system name <| fun
                         | "line" -> 
                             let neighborActor = findLineNeighbor(position.[0])  
                             //printfn "calling actor: %d" randomNum
-                            system.Scheduler.ScheduleTellRepeatedly (TimeSpan.Zero, TimeSpan.FromMilliseconds(20.), neighborActor, (Tuple(localS,localW)))
+                            system.Scheduler.ScheduleTellRepeatedly (TimeSpan.Zero, TimeSpan.FromMilliseconds(10.), neighborActor, (Tuple(localS,localW)))
                         | "3D" -> 
                             let neighborActor = find3dNeighbor(position)
                             //printfn "calling actor @ %A" position 
-                            system.Scheduler.ScheduleTellRepeatedly (TimeSpan.Zero, TimeSpan.FromMilliseconds(20.), neighborActor, (Tuple(localS,localW)))
+                            system.Scheduler.ScheduleTellRepeatedly (TimeSpan.Zero, TimeSpan.FromMilliseconds(10.), neighborActor, (Tuple(localS,localW)))
                         | "imp3D" -> 
                             let neighborActor = find3dNeighbor(position) 
-                            system.Scheduler.ScheduleTellRepeatedly (TimeSpan.Zero, TimeSpan.FromMilliseconds(20.), neighborActor, (Tuple(localS,localW)))
+                            system.Scheduler.ScheduleTellRepeatedly (TimeSpan.Zero, TimeSpan.FromMilliseconds(10.), neighborActor, (Tuple(localS,localW)))
                         | _ -> 
                             let neighborActor = listOfActors.[randomNum]
-                            system.Scheduler.ScheduleTellRepeatedly (TimeSpan.Zero, TimeSpan.FromMilliseconds(20.), neighborActor, (Tuple(localS,localW)))
+                            system.Scheduler.ScheduleTellRepeatedly (TimeSpan.Zero, TimeSpan.FromMilliseconds(10.), neighborActor, (Tuple(localS,localW)))
                             //neighborActor <! (Tuple(localS,localW)) // send half of s and w to next actor     
             | _ -> printfn "this shouldn't happen"    
             
@@ -193,6 +193,7 @@ let addNodesInArray nodes =
 let addNodesInCube nodes = 
     let cubeLength = Math.Cbrt(nodes |> float) |> int
     printfn "cube length %d" cubeLength
+    let mutable nodeCount = 0
     for grid in 0..cubeLength-1 do 
         let mutable gridOfActors = [] // make a new grid
         let gridNum = grid |> string 
@@ -201,10 +202,13 @@ let addNodesInCube nodes =
             let rowNum = row |> string
             for cell in 0..cubeLength-1 do
                 let cellNum = cell |> string
-                let actorName = gridNum + rowNum + cellNum
+                //let actorName = gridNum + rowNum + cellNum
+                nodeCount <- nodeCount + 1
+                let actorName = nodeCount |> string
                 //printfn "position: %s" actorName
                 let actor = [pushSum actorName [grid;row;cell]]
                 rowOfActors <- List.append rowOfActors actor  // append actor 
+                
             let rowOfActors2 = [rowOfActors]
             gridOfActors <- List.append gridOfActors rowOfActors2 // append row of actors 
         
