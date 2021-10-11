@@ -15,7 +15,6 @@ let system = System.create "my-system" <| ConfigurationFactory.Default()
 type Message =
     | Stop
     | StartSum of int * string
-    | FirstMessage of int
     | Tuple of float * float
     | Estimate
 
@@ -31,7 +30,7 @@ let proc = Process.GetCurrentProcess()
 let cpu_time_stamp = proc.TotalProcessorTime
 let sw = Stopwatch.StartNew()
 
-let mutable listOfActors = []//[0..inputParams.[0] |> int] // list of actors as long as the nodes inputted
+let mutable listOfActors = [] //[0..inputParams.[0] |> int] // list of actors as long as the nodes inputted
 //let mutable gridOfActors = [listOfActors]
 let mutable cubeOfActors = []
 let allActors = Map.empty
@@ -126,27 +125,6 @@ let pushSum (name:string) (topologyPosition:int list) = spawn system name <| fun
             let random = Random()
             
             match msg with
-            | FirstMessage numOfNodes -> 
-                let randomNum = random.Next(numOfNodes) // randomly choose actor to send to
-                localW <- localW/2.0 // keep half and send half
-                localS <- localS/2.0
-                match topology with
-                    | "line" -> 
-                        let neighborActor = findLineNeighbor(position.[0])  
-                        //printfn "calling actor: %d" randomNum
-                        neighborActor <! (Tuple(localS,localW)) // send half of s and w to next actor
-                    | "3D" -> 
-                        //printfn "calling actor @ %A" position 
-                        let neighborActor = find3dNeighbor(position)
-                        //system.Scheduler.ScheduleTellRepeatedly(TimeSpan.FromSeconds(5.), TimeSpan.FromSeconds(10.), neighborActor, ())
-                        neighborActor <! (Tuple(localS,localW)) // send half of s and w to next actor
-                    | "imp3D" -> 
-                        let neighborActor = find3dNeighbor(position) 
-                        neighborActor <! (Tuple(localS,localW)) // send half of s and w to next actor
-                        printfn "imperfect 3D"
-                    | _ -> 
-                        printfn "here"
-                        listOfActors.[randomNum] <! (Tuple(localS,localW)) // send half of s and w to next actor  
             | Tuple (recievedS,recievedW) -> 
                 //printfn "local s: %f" localS
                 //printfn "recieved s: %f" recievedS
@@ -165,19 +143,19 @@ let pushSum (name:string) (topologyPosition:int list) = spawn system name <| fun
                         | "line" -> 
                             let neighborActor = findLineNeighbor(position.[0])  
                             //printfn "calling actor: %d" randomNum
-                            neighborActor <! (Tuple(localS,localW)) // send half of s and w to next actor
+                            system.Scheduler.ScheduleTellRepeatedly (TimeSpan.Zero, TimeSpan.FromMilliseconds(20.), neighborActor, (Tuple(localS,localW)))
                         | "3D" -> 
                             let neighborActor = find3dNeighbor(position)
                             //printfn "calling actor @ %A" position 
-                            neighborActor <! (Tuple(localS,localW)) // send half of s and w to next actor
+                            system.Scheduler.ScheduleTellRepeatedly (TimeSpan.Zero, TimeSpan.FromMilliseconds(20.), neighborActor, (Tuple(localS,localW)))
                         | "imp3D" -> 
                             let neighborActor = find3dNeighbor(position) 
-                            neighborActor <! (Tuple(localS,localW)) // send half of s and w to next actor
-                        | _ -> listOfActors.[randomNum] <! (Tuple(localS,localW)) // send half of s and w to next actor         
-            | Estimate ->   
-                let estimate =  s/w 
-                printfn "estimate: %f" estimate
-            | _ -> printfn "wut" 
+                            system.Scheduler.ScheduleTellRepeatedly (TimeSpan.Zero, TimeSpan.FromMilliseconds(20.), neighborActor, (Tuple(localS,localW)))
+                        | _ -> 
+                            let neighborActor = listOfActors.[randomNum]
+                            system.Scheduler.ScheduleTellRepeatedly (TimeSpan.Zero, TimeSpan.FromMilliseconds(20.), neighborActor, (Tuple(localS,localW)))
+                            //neighborActor <! (Tuple(localS,localW)) // send half of s and w to next actor     
+            | _ -> printfn "this shouldn't happen"    
             
             let oldEstimate = s/w
             let newEstimate = localS/localW
@@ -244,20 +222,20 @@ let boss =
                 match topology with
                     | "line" -> 
                         addNodesInArray(numOfNodes) 
-                        listOfActors.[randomNum] <! FirstMessage(nodes) // s = i, w = 1 
+                        listOfActors.[randomNum] <! Tuple(0.0,0.0) // ill not add anything to s,w since its first iteration 
                     | "3D" -> 
                         printfn "3D topology"
                         addNodesInCube(numOfNodes)
                         let gridOfActors : _ list = cubeOfActors.[0] // first index as index into cube
                         let listOfActors : _ list = gridOfActors.[0]
                         let actor = listOfActors.[0]                        
-                        actor <! FirstMessage(nodes)
+                        actor <! Tuple(0.0,0.0)
                     | "imp3D" -> 
                         addNodesInCube(numOfNodes) 
-                        cubeOfActors.[randomNum].[0].[0] <! FirstMessage(nodes)
+                        cubeOfActors.[randomNum].[0].[0] <! Tuple(0.0,0.0)
                     | _ -> 
                         addNodesInArray(numOfNodes)  // append  
-                        listOfActors.[randomNum] <! FirstMessage(nodes) // s = i, w = 1    
+                        listOfActors.[randomNum] <! Tuple(0.0,0.0) // s = i, w = 1    
             | Stop -> mailbox.Context.System.Terminate() |> ignore
             | _ -> printfn "here"   
             
