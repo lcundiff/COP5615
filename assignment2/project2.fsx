@@ -237,13 +237,14 @@ let pushSum (name:string) (topologyPosition:int list) = spawn system name <| fun
 let addNodesInArray nodes = 
     for i in 0..nodes do 
         let name = i |> string
-        if alg = "gossip"
-        then 
+        if alg = "gossip" then
             let actor = [gossipActor name [i]]
             listOfActors <- List.append listOfActors actor  // append 
+
         else
             let actor = [pushSum name [i]]
             listOfActors <- List.append listOfActors actor  // append 
+
 
 let addNodesInCube nodes = 
     let cubeLength = Math.Cbrt(nodes |> float) |> int
