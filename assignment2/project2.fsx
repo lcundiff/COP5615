@@ -19,7 +19,6 @@ type Message =
     | Estimate
     |StartGossip of int * String
     |Rumor of string
-    |ReceiveRumor of string * int
 
 printfn "input ready"
 let inputLine = Console.ReadLine() 
@@ -105,9 +104,7 @@ let findLineNeighbor (index: int) =
 
 let gossipActor (name: string) (topologyPosition:int list) = spawn system name <| fun mailbox ->
 
-    let rec loop (rumor, count,(position: int list)) = 
-       
-       actor {
+    let rec loop (count,(position: int list)) = actor {
             let! msg = mailbox.Receive()
             let sender = mailbox.Sender() 
             let mutable counter = count
@@ -115,27 +112,27 @@ let gossipActor (name: string) (topologyPosition:int list) = spawn system name <
             let random = Random()
 
             match msg with
-            |ReceiveRumor (rumor,count) ->
+            |Rumor (rumor) ->
                 let randomNum = random.Next(numOfNodes)
                 
                 if count < 10 then
                     match topology with
                     | "line" -> 
                         let neighborActor = findLineNeighbor(position.[0])
-                        system.Scheduler.Advanced.ScheduleRepeatedly (TimeSpan.FromMilliseconds 0., TimeSpan.FromMilliseconds(50.), fun () -> 
+                        (*system.Scheduler.Advanced.ScheduleRepeatedly (TimeSpan.FromMilliseconds 0., TimeSpan.FromMilliseconds(50.), fun () -> 
                             findLineNeighbor(position.[0]) <! rumor
-                        )
-                        neighborActor <! rumor 
+                        )*)
+                        neighborActor <! Rumor(rumor) 
                     | "3D" -> 
                         let neighborActor = find3dNeighbor(position)                          
-                        neighborActor <! rumor 
+                        neighborActor <!  Rumor(rumor) 
                     | "imp3D" -> 
                         let neighborActor = find3dNeighbor(position) 
-                        neighborActor <! rumor 
+                        neighborActor <!  Rumor(rumor) 
                     | _ -> 
                         let neighborActor = listOfActors.[randomNum]
-                        neighborActor <! rumor
-            |_ -> printf""
+                        neighborActor <!  Rumor(rumor)
+            |_ -> printf ""
 
             counter <- counter + 1
 
@@ -148,12 +145,11 @@ let gossipActor (name: string) (topologyPosition:int list) = spawn system name <
                 printfn "REAL time = %fms" sw.Elapsed.TotalMilliseconds
                 mailbox.Context.System.Terminate() |> ignore
 
-            return! loop(rumor,counter,position)
-            
-
+            return! loop(counter,position)
         }
     let initialS = name |> float
-    loop(initialS,rumor,topologyPosition)
+    loop(0,topologyPosition)
+
 
 let pushSum (name:string) (topologyPosition:int list) = spawn system name <| fun mailbox ->
         //let mutable keepMessaging = true
@@ -241,8 +237,13 @@ let pushSum (name:string) (topologyPosition:int list) = spawn system name <| fun
 let addNodesInArray nodes = 
     for i in 0..nodes do 
         let name = i |> string
-        let actor = [pushSum name [i]]
-        listOfActors <- List.append listOfActors actor  // append 
+        if alg = "gossip"
+        then 
+            let actor = [gossipActor name [i]]
+            listOfActors <- List.append listOfActors actor  // append 
+        else
+            let actor = [pushSum name [i]]
+            listOfActors <- List.append listOfActors actor  // append 
 
 let addNodesInCube nodes = 
     let cubeLength = Math.Cbrt(nodes |> float) |> int
@@ -260,8 +261,13 @@ let addNodesInCube nodes =
                 nodeCount <- nodeCount + 1
                 let actorName = nodeCount |> string
                 //printfn "position: %s" actorName
-                let actor = [pushSum actorName [grid;row;cell]]
-                rowOfActors <- List.append rowOfActors actor  // append actor 
+                if alg = "gossip"
+                then 
+                    let actor = [gossipActor actorName [grid;row;cell]]
+                    rowOfActors <- List.append rowOfActors actor  // append gossip actor                     
+                else
+                    let actor = [pushSum actorName [grid;row;cell]]
+                    rowOfActors <- List.append rowOfActors actor  // append pushsum actor 
                 
             let rowOfActors2 = [rowOfActors]
             gridOfActors <- List.append gridOfActors rowOfActors2 // append row of actors 
@@ -269,7 +275,7 @@ let addNodesInCube nodes =
         let gridOfActors2 = [gridOfActors] 
         cubeOfActors <- List.append cubeOfActors gridOfActors2 // append grid for each layer of depth
     
-    
+(*
 let boss2 (nodes: int) (mailbox: Actor<_>) rumor =
     
     let refArr =
@@ -307,6 +313,7 @@ let boss2 (nodes: int) (mailbox: Actor<_>) rumor =
                     actorIs <! "Finished"
         }
     loop ()
+*)
 
 let boss = 
     spawn system "boss" 
@@ -359,8 +366,9 @@ let boss =
 //printfn "%s" inputParams.[0] // should be number of nodes
 
 if String.Equals(alg,"gossip",StringComparison.CurrentCultureIgnoreCase)
-then boss <! StartGossip (inputParams.[0] |> int, inputParams.[1]) // do gossip 
+then 
+    printfn "starting gossip"
+    boss <! StartGossip (inputParams.[0] |> int, inputParams.[1]) // do gossip 
 else boss <! StartSum (inputParams.[0] |> int, inputParams.[1]) // otherwise do sum
-
 
 let input2 = System.Console.ReadLine() |> ignore
