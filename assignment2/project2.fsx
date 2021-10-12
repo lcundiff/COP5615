@@ -15,7 +15,7 @@ let system = System.create "my-system" <| ConfigurationFactory.Default()
 type Message =
     | Stop
     | StartSum of int * string
-    | Tuple of float * float
+    | SumWeight of float * float
     | Estimate
 
 printfn "input ready"
@@ -27,7 +27,7 @@ let topology = inputParams.[1]
 let alg = inputParams.[2]
 
 let proc = Process.GetCurrentProcess()
-let cpu_time_stamp = proc.TotalProcessorTime
+let cpuTime = proc.TotalProcessorTime
 let sw = Stopwatch.StartNew()
 
 let mutable listOfActors = [] //[0..inputParams.[0] |> int] // list of actors as long as the nodes inputted
@@ -83,11 +83,19 @@ let findLineNeighbor (index: int) =
     let mutable neighbor = index 
     let randomDirection = random.Next(1)
 
-    // which direction 
-    if randomDirection = 1
-    then neighbor <- neighbor + 1
-    else neighbor <- neighbor - 1 
+    let mutable properIndexNotFound = true
+    while properIndexNotFound do // loop until we are not index out of bounds
+        // which direction 
+        if randomDirection = 1
+        then neighbor <- neighbor + 1
+        else neighbor <- neighbor - 1 
 
+        if (neighbor < numOfNodes && neighbor >= 0)
+        then 
+            properIndexNotFound <- false 
+        else 
+            properIndexNotFound <- true
+            
     let actor = listOfActors.[neighbor]
     actor
     //cubeOfActors.[neighbor.[0]][neighbor.[1]][neighbor.[2]] // return actor neighbor
@@ -116,20 +124,19 @@ let gossipActor (neighbors: int[]) (mailbox : Actor<_>) (*(mailbox: Actor<_>)*) 
 let pushSum (name:string) (topologyPosition:int list) = spawn system name <| fun mailbox ->
         //let mutable keepMessaging = true
         let rec loop(s,w, count,(position: int list)) = actor {
-            let! msg = mailbox.Receive()
+            let! msg = mailbox.Receive() 
             let sender = mailbox.Sender() 
             let mutable localS = s
             let mutable localW = w
             let mutable counter = count
             let mutable position = position
             let random = Random()
-            
+            //printfn " pos: %A" position 
             match msg with
-            | Tuple (recievedS,recievedW) -> 
+            | SumWeight (recievedS,recievedW) -> 
                 //printfn "local s: %f" localS
-                //printfn "recieved s: %f" recievedS
-                localW <- localW + recievedW
                 localS <- localS + recievedS
+                localW <- localW + recievedW
                 
                 localS <- localS/2.0; // keep half
                 localW <- localW/2.0;
@@ -141,20 +148,29 @@ let pushSum (name:string) (topologyPosition:int list) = spawn system name <| fun
                 then
                     match topology with
                         | "line" -> 
-                            let neighborActor = findLineNeighbor(position.[0])  
+                            let neighborActor = findLineNeighbor(position.[0])
                             //printfn "calling actor: %d" randomNum
-                            system.Scheduler.ScheduleTellRepeatedly (TimeSpan.Zero, TimeSpan.FromMilliseconds(10.), neighborActor, (Tuple(localS,localW)))
+                            system.Scheduler.Advanced.ScheduleRepeatedly (TimeSpan.FromMilliseconds 0., TimeSpan.FromMilliseconds(50.), fun () -> 
+                                findLineNeighbor(position.[0]) <! (SumWeight(localS,localW))
+                            )
+                            neighborActor <! (SumWeight(localS,localW)) // send half of s and w to next actor 
                         | "3D" -> 
                             let neighborActor = find3dNeighbor(position)
                             //printfn "calling actor @ %A" position 
-                            system.Scheduler.ScheduleTellRepeatedly (TimeSpan.Zero, TimeSpan.FromMilliseconds(10.), neighborActor, (Tuple(localS,localW)))
+                            (*system.Scheduler.Advanced.ScheduleRepeatedly (TimeSpan.FromMilliseconds 0., TimeSpan.FromMilliseconds 100., fun () -> 
+                                find3dNeighbor(position) <! (SumWeight(localS,localW))
+                            )*)                           
+                            neighborActor <! (SumWeight(localS,localW)) // send half of s and w to next actor 
                         | "imp3D" -> 
                             let neighborActor = find3dNeighbor(position) 
-                            system.Scheduler.ScheduleTellRepeatedly (TimeSpan.Zero, TimeSpan.FromMilliseconds(10.), neighborActor, (Tuple(localS,localW)))
+                            //system.Scheduler.ScheduleTellRepeatedly (TimeSpan.Zero, TimeSpan.FromMilliseconds(5.), neighborActor, (SumWeight(localS,localW)))
+                            neighborActor <! (SumWeight(localS,localW)) // send half of s and w to next actor 
                         | _ -> 
                             let neighborActor = listOfActors.[randomNum]
-                            system.Scheduler.ScheduleTellRepeatedly (TimeSpan.Zero, TimeSpan.FromMilliseconds(10.), neighborActor, (Tuple(localS,localW)))
-                            //neighborActor <! (Tuple(localS,localW)) // send half of s and w to next actor     
+                            (*system.Scheduler.Advanced.ScheduleRepeatedly (TimeSpan.FromMilliseconds 0., TimeSpan.FromMilliseconds 100., fun () -> 
+                                listOfActors.[randomNum] <! (SumWeight(localS,localW))
+                            )*)     
+                            neighborActor <! (SumWeight(localS,localW)) // send half of s and w to next actor     
             | _ -> printfn "this shouldn't happen"    
             
             let oldEstimate = s/w
@@ -173,8 +189,12 @@ let pushSum (name:string) (topologyPosition:int list) = spawn system name <| fun
             if counter > 2
             then 
                 printfn "actor: %s terminating" name
-                printfn "diff: %.10f" diff
+                //printfn "diff: %.10f" diff
                 //keepMessaging <- false
+                let cpuTimeDiff = (proc.TotalProcessorTime-cpuTime).TotalMilliseconds
+                sw.Stop()
+                printfn "CPU time = %dms" (int64 cpuTimeDiff)
+                printfn "REAL time = %fms" sw.Elapsed.TotalMilliseconds
                 mailbox.Context.System.Terminate() |> ignore
            
             // handle an incoming message
@@ -185,7 +205,7 @@ let pushSum (name:string) (topologyPosition:int list) = spawn system name <| fun
         loop(initialS,1.0,0,topologyPosition) // all actors start out with an s and w value that is maintained 
 
 let addNodesInArray nodes = 
-    for i in 1..nodes do 
+    for i in 0..nodes do 
         let name = i |> string
         let actor = [pushSum name [i]]
         listOfActors <- List.append listOfActors actor  // append 
@@ -226,20 +246,20 @@ let boss =
                 match topology with
                     | "line" -> 
                         addNodesInArray(numOfNodes) 
-                        listOfActors.[randomNum] <! Tuple(0.0,0.0) // ill not add anything to s,w since its first iteration 
+                        listOfActors.[randomNum] <! SumWeight(0.0,0.0) // ill not add anything to s,w since its first iteration 
                     | "3D" -> 
                         printfn "3D topology"
                         addNodesInCube(numOfNodes)
                         let gridOfActors : _ list = cubeOfActors.[0] // first index as index into cube
                         let listOfActors : _ list = gridOfActors.[0]
                         let actor = listOfActors.[0]                        
-                        actor <! Tuple(0.0,0.0)
+                        actor <! SumWeight(0.0,0.0)
                     | "imp3D" -> 
                         addNodesInCube(numOfNodes) 
-                        cubeOfActors.[randomNum].[0].[0] <! Tuple(0.0,0.0)
+                        cubeOfActors.[randomNum].[0].[0] <! SumWeight(0.0,0.0)
                     | _ -> 
                         addNodesInArray(numOfNodes)  // append  
-                        listOfActors.[randomNum] <! Tuple(0.0,0.0) // s = i, w = 1    
+                        listOfActors.[randomNum] <! SumWeight(0.0,0.0) // s = i, w = 1    
             | Stop -> mailbox.Context.System.Terminate() |> ignore
             | _ -> printfn "here"   
             
