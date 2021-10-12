@@ -205,8 +205,12 @@ let pushSum (name:string) (topologyPosition:int list) = spawn system name <| fun
                             //system.Scheduler.ScheduleTellRepeatedly (TimeSpan.Zero, TimeSpan.FromMilliseconds(5.), neighborActor, (SumWeight(localS,localW)))
                             neighborActor <! (SumWeight(localS,localW)) // send half of s and w to next actor
                             let cubeLength = Math.Cbrt(numOfNodes |> float) |> int
-                            let random3dNum = random.Next(cubeLength-1) // randomly choose actor to start with                            
-                            cubeOfActors.[random3dNum].[random3dNum].[random3dNum] <! SumWeight(localS,localW)
+                            let random3dNum = random.Next(cubeLength-1) // randomly choose actor to start with  
+                            let gridOfActors : _ list = cubeOfActors.[random3dNum] // first index as index into cube
+                            let listOfActors : _ list = gridOfActors.[random3dNum]
+                            let actor = listOfActors.[random3dNum]    
+                            actor <! SumWeight(localS,localW)                              
+                            //cubeOfActors.[random3dNum].[random3dNum].[random3dNum] <! SumWeight(localS,localW)
                         | _ -> 
                             let neighborActor = listOfActors.[randomNum]
                             (*system.Scheduler.Advanced.ScheduleRepeatedly (TimeSpan.FromMilliseconds 0., TimeSpan.FromMilliseconds 100., fun () -> 
