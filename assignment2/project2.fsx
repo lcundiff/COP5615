@@ -17,6 +17,9 @@ type Message =
     | StartSum of int * string
     | SumWeight of float * float
     | Estimate
+    |StartGossip of int * String
+    |Rumor of string
+    |ReceiveRumor of string * int
 
 printfn "input ready"
 let inputLine = Console.ReadLine() 
@@ -100,26 +103,57 @@ let findLineNeighbor (index: int) =
     actor
     //cubeOfActors.[neighbor.[0]][neighbor.[1]][neighbor.[2]] // return actor neighbor
 
-let gossipActor (neighbors: int[]) (mailbox : Actor<_>) (*(mailbox: Actor<_>)*) =
+let gossipActor (name: string) (topologyPosition:int list) = spawn system name <| fun mailbox ->
 
-    let mutable counter = 0
-    let rand = Random()
-    rand.Next(0, neighbors.Length) |> ignore
-
-    let rec loop () = 
+    let rec loop (rumor, count,(position: int list)) = 
        
        actor {
             let! msg = mailbox.Receive()
-            let index = rand.Next(0, neighbors.Length) |> int  
-            let target = neighbors.[index]
-            //target <! msg
+            let sender = mailbox.Sender() 
+            let mutable counter = count
+            let mutable position = position
+            let random = Random()
+
+            match msg with
+            |ReceiveRumor (rumor,count) ->
+                let randomNum = random.Next(numOfNodes)
+                
+                if count < 10 then
+                    match topology with
+                    | "line" -> 
+                        let neighborActor = findLineNeighbor(position.[0])
+                        system.Scheduler.Advanced.ScheduleRepeatedly (TimeSpan.FromMilliseconds 0., TimeSpan.FromMilliseconds(50.), fun () -> 
+                            findLineNeighbor(position.[0]) <! rumor
+                        )
+                        neighborActor <! rumor 
+                    | "3D" -> 
+                        let neighborActor = find3dNeighbor(position)                          
+                        neighborActor <! rumor 
+                    | "imp3D" -> 
+                        let neighborActor = find3dNeighbor(position) 
+                        neighborActor <! rumor 
+                    | _ -> 
+                        let neighborActor = listOfActors.[randomNum]
+                        neighborActor <! rumor
+            |_ -> printf""
+
             counter <- counter + 1
-            if counter < 50 then
-                if counter = 1 then
-                    mailbox.Context.Parent <! msg
-                return! loop()
-    }
-    loop()
+
+            if counter > 10 then
+                printfn "actor: %s terminating" name
+
+                let cpuTimeDiff = (proc.TotalProcessorTime-cpuTime).TotalMilliseconds
+                sw.Stop()
+                printfn "CPU time = %dms" (int64 cpuTimeDiff)
+                printfn "REAL time = %fms" sw.Elapsed.TotalMilliseconds
+                mailbox.Context.System.Terminate() |> ignore
+
+            return! loop(rumor,counter,position)
+            
+
+        }
+    let initialS = name |> float
+    loop(initialS,rumor,topologyPosition)
 
 let pushSum (name:string) (topologyPosition:int list) = spawn system name <| fun mailbox ->
         //let mutable keepMessaging = true
@@ -259,7 +293,28 @@ let boss =
                         cubeOfActors.[randomNum].[0].[0] <! SumWeight(0.0,0.0)
                     | _ -> 
                         addNodesInArray(numOfNodes)  // append  
-                        listOfActors.[randomNum] <! SumWeight(0.0,0.0) // s = i, w = 1    
+                        listOfActors.[randomNum] <! SumWeight(0.0,0.0) // s = i, w = 1  
+            | StartGossip (nodes, topology) -> 
+                let random = Random()
+                let randomNum = random.Next(nodes) // randomly choose actor to start with
+                match topology with
+                    | "line" -> 
+                        addNodesInArray(numOfNodes) 
+                        listOfActors.[randomNum] <! Rumor("rumor") // ill not add anything to s,w since its first iteration 
+                    | "3D" -> 
+                        printfn "3D topology"
+                        addNodesInCube(numOfNodes)
+                        let gridOfActors : _ list = cubeOfActors.[0] // first index as index into cube
+                        let listOfActors : _ list = gridOfActors.[0]
+                        let actor = listOfActors.[0]                        
+                        actor <! Rumor("rumor")
+                    | "imp3D" -> 
+                        addNodesInCube(numOfNodes) 
+                        cubeOfActors.[randomNum].[0].[0] <! Rumor("rumor")
+                    | _ -> 
+                        addNodesInArray(numOfNodes)  // append  
+                        listOfActors.[randomNum] <! Rumor("rumor")
+                        
             | Stop -> mailbox.Context.System.Terminate() |> ignore
             | _ -> printfn "here"   
             
@@ -267,7 +322,7 @@ let boss =
 //printfn "%s" inputParams.[0] // should be number of nodes
 
 if String.Equals(alg,"gossip",StringComparison.CurrentCultureIgnoreCase)
-then boss <! StartSum (inputParams.[0] |> int, inputParams.[1]) // do gossip 
+then boss <! StartGossip (inputParams.[0] |> int, inputParams.[1]) // do gossip 
 else boss <! StartSum (inputParams.[0] |> int, inputParams.[1]) // otherwise do sum
 
 
