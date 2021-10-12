@@ -83,11 +83,11 @@ let findLineNeighbor (index: int) =
     // which axis to find neighbor on
     let random = Random()
     let mutable neighbor = index 
-    let randomDirection = random.Next(1)
 
     let mutable properIndexNotFound = true
     while properIndexNotFound do // loop until we are not index out of bounds
         // which direction 
+        let randomDirection = random.Next(2)
         if randomDirection = 1
         then neighbor <- neighbor + 1
         else neighbor <- neighbor - 1 
@@ -119,16 +119,26 @@ let gossipActor (name: string) (topologyPosition:int list) = spawn system name <
                     match topology with
                     | "line" -> 
                         let neighborActor = findLineNeighbor(position.[0])
-                        (*system.Scheduler.Advanced.ScheduleRepeatedly (TimeSpan.FromMilliseconds 0., TimeSpan.FromMilliseconds(50.), fun () -> 
+                        system.Scheduler.Advanced.ScheduleRepeatedly (TimeSpan.FromMilliseconds 0., TimeSpan.FromMilliseconds(50.), fun () -> 
                             findLineNeighbor(position.[0]) <! rumor
-                        )*)
+                        )
                         neighborActor <! Rumor(rumor) 
                     | "3D" -> 
-                        let neighborActor = find3dNeighbor(position)                          
+                        let neighborActor = find3dNeighbor(position)   
+                        system.Scheduler.Advanced.ScheduleRepeatedly (TimeSpan.FromMilliseconds 0., TimeSpan.FromMilliseconds(50.), fun () -> 
+                            find3dNeighbor(position) <! Rumor(rumor) 
+                        )                      
                         neighborActor <!  Rumor(rumor) 
                     | "imp3D" -> 
                         let neighborActor = find3dNeighbor(position) 
-                        neighborActor <!  Rumor(rumor) 
+                        neighborActor <!  Rumor(rumor)
+                        system.Scheduler.Advanced.ScheduleRepeatedly (TimeSpan.FromMilliseconds 0., TimeSpan.FromMilliseconds(50.), fun () -> 
+                            find3dNeighbor(position) <! Rumor(rumor) 
+                        )   
+                        let neighborActorRandom = listOfActors.[randomNum]
+                        let cubeLength = Math.Cbrt(numOfNodes |> float) |> int
+                        let random3dNum = random.Next(cubeLength-1) // randomly choose actor to start with                            
+                        cubeOfActors.[random3dNum].[random3dNum].[random3dNum] <!  Rumor(rumor)                         
                     | _ -> 
                         let neighborActor = listOfActors.[randomNum]
                         neighborActor <!  Rumor(rumor)
@@ -194,7 +204,10 @@ let pushSum (name:string) (topologyPosition:int list) = spawn system name <| fun
                         | "imp3D" -> 
                             let neighborActor = find3dNeighbor(position) 
                             //system.Scheduler.ScheduleTellRepeatedly (TimeSpan.Zero, TimeSpan.FromMilliseconds(5.), neighborActor, (SumWeight(localS,localW)))
-                            neighborActor <! (SumWeight(localS,localW)) // send half of s and w to next actor 
+                            neighborActor <! (SumWeight(localS,localW)) // send half of s and w to next actor
+                            let cubeLength = Math.Cbrt(numOfNodes |> float) |> int
+                            let random3dNum = random.Next(cubeLength-1) // randomly choose actor to start with                            
+                            cubeOfActors.[random3dNum].[random3dNum].[random3dNum] <! SumWeight(localS,localW)
                         | _ -> 
                             let neighborActor = listOfActors.[randomNum]
                             (*system.Scheduler.Advanced.ScheduleRepeatedly (TimeSpan.FromMilliseconds 0., TimeSpan.FromMilliseconds 100., fun () -> 
@@ -329,14 +342,18 @@ let boss =
                         listOfActors.[randomNum] <! SumWeight(0.0,0.0) // ill not add anything to s,w since its first iteration 
                     | "3D" -> 
                         printfn "3D topology"
+                        let cubeLength = Math.Cbrt(numOfNodes |> float) |> int
+                        let random3dNum = random.Next(cubeLength-1) // randomly choose actor to start with
                         addNodesInCube(numOfNodes)
-                        let gridOfActors : _ list = cubeOfActors.[0] // first index as index into cube
-                        let listOfActors : _ list = gridOfActors.[0]
-                        let actor = listOfActors.[0]                        
+                        let gridOfActors : _ list = cubeOfActors.[random3dNum] // first index as index into cube
+                        let listOfActors : _ list = gridOfActors.[random3dNum]
+                        let actor = listOfActors.[random3dNum]                        
                         actor <! SumWeight(0.0,0.0)
                     | "imp3D" -> 
+                        let cubeLength = Math.Cbrt(numOfNodes |> float) |> int
+                        let random3dNum = random.Next(cubeLength-1) // randomly choose actor to start with
                         addNodesInCube(numOfNodes) 
-                        cubeOfActors.[randomNum].[0].[0] <! SumWeight(0.0,0.0)
+                        cubeOfActors.[random3dNum].[random3dNum].[random3dNum] <! SumWeight(0.0,0.0)
                     | _ -> 
                         addNodesInArray(numOfNodes)  // append  
                         listOfActors.[randomNum] <! SumWeight(0.0,0.0) // s = i, w = 1
