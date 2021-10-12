@@ -135,7 +135,6 @@ let gossipActor (name: string) (topologyPosition:int list) = spawn system name <
                         system.Scheduler.Advanced.ScheduleRepeatedly (TimeSpan.FromMilliseconds 0., TimeSpan.FromMilliseconds(50.), fun () -> 
                             find3dNeighbor(position) <! Rumor(rumor) 
                         )   
-                        let neighborActorRandom = listOfActors.[randomNum]
                         let cubeLength = Math.Cbrt(numOfNodes |> float) |> int
                         let random3dNum = random.Next(cubeLength-1) // randomly choose actor to start with                            
                         cubeOfActors.[random3dNum].[random3dNum].[random3dNum] <!  Rumor(rumor)                         
@@ -372,8 +371,10 @@ let boss =
                         let actor = listOfActors.[0]                        
                         actor <! Rumor("rumor")
                     | "imp3D" -> 
+                        let cubeLength = Math.Cbrt(numOfNodes |> float) |> int
+                        let random3dNum = random.Next(cubeLength-1) // randomly choose actor to start with
                         addNodesInCube(numOfNodes) 
-                        cubeOfActors.[randomNum].[0].[0] <! Rumor("rumor")
+                        cubeOfActors.[random3dNum].[random3dNum].[random3dNum] <! Rumor("rumor")
                     | _ -> 
                         addNodesInArray(numOfNodes)  // append  
                         listOfActors.[randomNum] <! Rumor("rumor")
