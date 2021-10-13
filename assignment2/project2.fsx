@@ -196,13 +196,15 @@ let pushSum (name:string) (topologyPosition:int list) = spawn system name <| fun
                         | "3D" -> 
                             let neighborActor = find3dNeighbor(position)
                             //printfn "calling actor @ %A" position 
-                            (*system.Scheduler.Advanced.ScheduleRepeatedly (TimeSpan.FromMilliseconds 0., TimeSpan.FromMilliseconds 100., fun () -> 
+                            system.Scheduler.Advanced.ScheduleRepeatedly (TimeSpan.FromMilliseconds 0., TimeSpan.FromMilliseconds 100., fun () -> 
                                 find3dNeighbor(position) <! (SumWeight(localS,localW))
-                            )*)                           
+                            )                           
                             neighborActor <! (SumWeight(localS,localW)) // send half of s and w to next actor 
                         | "imp3D" -> 
                             let neighborActor = find3dNeighbor(position) 
-                            //system.Scheduler.ScheduleTellRepeatedly (TimeSpan.Zero, TimeSpan.FromMilliseconds(5.), neighborActor, (SumWeight(localS,localW)))
+                            system.Scheduler.Advanced.ScheduleRepeatedly (TimeSpan.FromMilliseconds 0., TimeSpan.FromMilliseconds 100., fun () -> 
+                                find3dNeighbor(position) <! (SumWeight(localS,localW))
+                            )     
                             neighborActor <! (SumWeight(localS,localW)) // send half of s and w to next actor
                             let cubeLength = Math.Cbrt(numOfNodes |> float) |> int
                             let random3dNum = random.Next(cubeLength-1) // randomly choose actor to start with  
@@ -213,9 +215,9 @@ let pushSum (name:string) (topologyPosition:int list) = spawn system name <| fun
                             //cubeOfActors.[random3dNum].[random3dNum].[random3dNum] <! SumWeight(localS,localW)
                         | _ -> 
                             let neighborActor = listOfActors.[randomNum]
-                            (*system.Scheduler.Advanced.ScheduleRepeatedly (TimeSpan.FromMilliseconds 0., TimeSpan.FromMilliseconds 100., fun () -> 
+                            system.Scheduler.Advanced.ScheduleRepeatedly (TimeSpan.FromMilliseconds 0., TimeSpan.FromMilliseconds 100., fun () -> 
                                 listOfActors.[randomNum] <! (SumWeight(localS,localW))
-                            )*)     
+                            )     
                             neighborActor <! (SumWeight(localS,localW)) // send half of s and w to next actor     
             | _ -> printfn "this shouldn't happen"    
             
