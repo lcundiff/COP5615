@@ -189,7 +189,7 @@ let pushSum (name:string) (topologyPosition:int list) = spawn system name <| fun
                         | "line" -> 
                             let neighborActor = findLineNeighbor(position.[0])
                             //printfn "calling actor: %d" randomNum
-                            system.Scheduler.Advanced.ScheduleRepeatedly (TimeSpan.FromMilliseconds 0., TimeSpan.FromMilliseconds(50.), fun () -> 
+                            system.Scheduler.Advanced.ScheduleRepeatedly (TimeSpan.FromMilliseconds 0., TimeSpan.FromMilliseconds(100.), fun () -> 
                                 findLineNeighbor(position.[0]) <! (SumWeight(localS,localW))
                             )
                             neighborActor <! (SumWeight(localS,localW)) // send half of s and w to next actor 
@@ -248,7 +248,7 @@ let pushSum (name:string) (topologyPosition:int list) = spawn system name <| fun
         }
         let initialS = name |> float
         //printfn "actor: %s is at initial position: %A" name topologyPosition
-        loop(initialS,1.0,0,topologyPosition) // all actors start out with an s and w value that is maintained 
+        loop(1.0,1.0,0,topologyPosition) // all actors start out with an s and w value that is maintained 
 
 let addNodesInArray nodes = 
     for i in 0..nodes do 
