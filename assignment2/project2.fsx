@@ -250,7 +250,7 @@ let pushSum (name:string) (topologyPosition:int list) = spawn system name <| fun
         }
         let initialS = name |> float
         //printfn "actor: %s is at initial position: %A" name topologyPosition
-        loop(1.0,1.0,0,topologyPosition) // all actors start out with an s and w value that is maintained 
+        loop(initialS,1.0,0,topologyPosition) // all actors start out with an s and w value that is maintained 
 
 let addNodesInArray nodes = 
     for i in 0..nodes do 
