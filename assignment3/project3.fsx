@@ -27,7 +27,7 @@ let convertBackToString (sha1: byte[]) =
 // let mutable listOfActors = []
 let mutable keys = []
 let mutable nodes = [] 
-let mutable (nodeMappings: int array array) = [|[||]|]
+let mutable (nodeMappings: int array array) = [||]
 let m = 6.0
 let chordActor (id:string) (topologyPosition:int list) = spawn system id <| fun mailbox ->
     
@@ -48,30 +48,30 @@ let getNodeId() =
     let nodeId = random.Next((int max))
     nodeId 
 
-let rec identify (key:int) (index:int) = 
-    if (index >= nodes.Length)
-    then nodes.[0]
-    elif key >= nodes.[index]
-    then nodes.[index]
-    else identify key (index+1)
+let rec identify (key:int) (sortedNodes:int list) (index:int) = 
+    if (index >= sortedNodes.Length)
+    then sortedNodes.[0]
+    elif sortedNodes.[index] >= key
+    then sortedNodes.[index]
+    else identify key sortedNodes (index+1)
 
 let rec map (key:int) (nodeForKey:int) (index: int)=
     if (index >= nodeMappings.Length)
     then nodeMappings <- Array.append nodeMappings [|[|nodeForKey; key|]|]
-    else if (nodeForKey = nodeMappings.[index].[0])
+    elif (nodeForKey = nodeMappings.[index].[0])
     then nodeMappings.[index] <- Array.append nodeMappings.[index] [|key|]
     else map key nodeForKey (index+1)
 
-
+// key = 63
+// node = 65
 let findClosestNode ()= 
-    printfn "here!!"
-    printfn "%A" keys
+    let sortedNodes = List.sort nodes
     for k in keys do
-        printfn "here"
-        let nodeForKey = identify k 0
+        let nodeForKey = identify k sortedNodes 0 // 65
         map k nodeForKey 0
+        // [[0;120;125;130][1;1][8;2;4;6][65;62;63]]
     nodeMappings
-
+    
 let generateKeys ()=
     for k in 0..numOfNodes/2 do
         let keyInitializer = getNodeId()
@@ -82,9 +82,7 @@ let generateKeys ()=
 
 
 let addNodesInArray ()= 
-    printfn "numOfNodes2 : %i" numOfNodes
-    for n in 0..numOfNodes do
-        printfn"here"
+    for n in 0..numOfNodes-1 do
         let id = getNodeId()
         // let id_string = id |> string
         // let actor = [chordActor id_string ]
@@ -95,17 +93,22 @@ let addNodesInArray ()=
 [<EntryPoint>]
 let main argv = 
     numOfNodes <- (int argv.[0])
-    printfn "Num of nodes: %i" numOfNodes
     addNodesInArray()
-    printfn "Nodes: %A" nodes
     generateKeys()
 
     printfn "%A" keys
     printfn"Printing list"
     findClosestNode()
     printfn "%A" nodeMappings
-    for item in nodeMappings do
-        printfn "%A" item
     System.Console.ReadLine() |> ignore
     0 // return an integer exit code
 
+
+// 55, 27, 9, 62, 17
+// Actor55 [SHA1KEYS-54, SHA1KEY-28] 
+// Actor 27 []
+// Actor9 [5]
+// Actor62 ..
+
+// ACtor 55 isn't going to look for key 5
+// SHA1(5) -> AA490yhdf0as9h0312h4
