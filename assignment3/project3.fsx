@@ -12,10 +12,9 @@ open Akka.Actor
 let system = ActorSystem.Create("FSharp")
 
 type Message =
-    | Successor of string * int
+    | Successor of int * int // key * hopsCount
 
 let mutable numOfNodes = 0
-// let mutable listOfActors = []
 let mutable keys = []
 let mutable nodes = [] 
 let mutable (nodeMappings: int array array) = [||]
@@ -90,23 +89,25 @@ let chordActor (id:string) (keyList: (int*string) list) successor = spawn system
         let sender = mailbox.Sender()
 
         match msg with
-            | Successor(keyHash,hops) -> 
-                let newHops = hops+1
+            | Successor(keyId,hops) -> 
+                let keyHash = convertBackToString(convertToSHA1(keyId |> string)) // should we be comparing key hash or the key id? adding this for now
+                printfn "Actor: %s recieved key query for %s" id keyHash
+                let newHops = hops+1 // keep track of how many hops it takes to find key by itterating by 1
                 let mutable keyFound = false
-                for (k,hash) in keyList do 
+                // keyList has a id and a key hash
+                for (k,hash) in keyList do // check if current node contains key we are looking for
                     if keyHash = hash
                     then 
                         keyFound <- true
                 if keyFound
-                then printfn "key found after %d hops" newHops 
+                then printfn "key found after %d hops" newHops // not sure what to do here?
                 else 
                     // send request every second
                     system.Scheduler.Advanced.ScheduleRepeatedly (TimeSpan.FromMilliseconds 0., TimeSpan.FromMilliseconds(1000.), fun () -> 
                         if currentRequests < numOfRequests
-                        then actorList.[fst(successor)] <! Successor(keyHash,newHops) 
+                        then actorList.[fst(successor)] <! Successor(keyId,newHops) 
                         else mailbox.Context.System.Terminate() |> ignore // stop the actor after it makes a certain amount of requests
                     ) 
-            //| _ -> printfn "incorrect message"
 
 
         // handle an incoming message
@@ -133,7 +134,9 @@ let createActors() =
     0    
 
 // [55; 54; 28]
-// 
+// will start process of searching for keys
+let findKeys () = 
+    actorList.[0] <! Successor(keys.[0],0) // no idea how to figure out which key to find
 
 [<EntryPoint>]
 let main argv = 
@@ -147,6 +150,7 @@ let main argv =
     findClosestNode() |> ignore
     printfn "Mappings: %A" nodeMappings
     createActors() |> ignore
+    findKeys() |> ignore
     // The KeyValue Mappings are in nodeMappings [|55; 24; 28|] [|9;5|].. to access 55 you would do nodeMappings.[0].[0]
     System.Console.ReadLine() |> ignore
     0 // return an integer exit code
