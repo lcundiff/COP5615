@@ -4,45 +4,17 @@ open System.Security.Cryptography
 open System.Text;
 open System.Diagnostics
 #r "nuget: Akka.FSharp" 
-#r "nuget: Akka.TestKit" 
 open Akka.Configuration
 open Akka.FSharp
 //open type System.Math; 
-open System.Collections.Generic 
 open Akka.Actor
 
-let system = System.create "my-system" <| ConfigurationFactory.Default()
+let system = ActorSystem.Create("FSharp")
 
 type Message =
     | Message of string
 
-printfn "input ready"
-let inputLine = Console.ReadLine() 
-let splitLine = (fun (line : string) -> Seq.toList (line.Split ' '))
-let inputParams = splitLine inputLine
-let numOfNodes = inputParams.[0] |> int
-let topology = inputParams.[1]
-let alg = inputParams.[2]
-let random = Random()
-
-let proc = Process.GetCurrentProcess()
-let cpuTime = proc.TotalProcessorTime
-let sw = Stopwatch.StartNew()
-
-(*
-let findSuccessor(id)
-    if (id ∈(n, successor])
-        successor;
-    else
-        n= closest preceding node(id);
-        n′.find successor(id);
-        // search the local table for the highest predecessor of id
-        n.closest preceding node(id)
-        for i = m downto 1
-            if (finger[i] ∈(n, id))
-                return finger[i];
-        n;
-*)
+let mutable numOfNodes = 0
 let convertToSHA1 (arg: string) =
     System.Text.Encoding.ASCII.GetBytes arg |> (new SHA1Managed()).ComputeHash
 
@@ -69,9 +41,11 @@ let chordActor (id:string) (topologyPosition:int list) = spawn system id <| fun 
     }
     loop()  
 
-let rec getNodeId = 
+let getNodeId() = 
     let max = 2.0**m - 1.0
-    let nodeId = random.Next(max |> int)
+    let random = Random()
+   
+    let nodeId = random.Next((int max))
     nodeId 
 
 let rec identify (key:int) (index:int) = 
@@ -89,7 +63,7 @@ let rec map (key:int) (nodeForKey:int) (index: int)=
     else map key nodeForKey (index+1)
 
 
-let findClosestNode = 
+let findClosestNode ()= 
     printfn "here!!"
     printfn "%A" keys
     for k in keys do
@@ -98,32 +72,40 @@ let findClosestNode =
         map k nodeForKey 0
     nodeMappings
 
-let generateKeys =
+let generateKeys ()=
     for k in 0..numOfNodes/2 do
-        let keyInitializer = getNodeId
+        let keyInitializer = getNodeId()
         // let hash = convertBackToString(convertToSHA1(keyInitializer |> string))
         // printfn "%i" keyInitializer
         keys <- List.append keys [keyInitializer]
     keys
 
 
-let addNodesInArray = 
-    for n in 0..numOfNodes do 
-        let id = getNodeId
+let addNodesInArray ()= 
+    printfn "numOfNodes2 : %i" numOfNodes
+    for n in 0..numOfNodes do
+        printfn"here"
+        let id = getNodeId()
         // let id_string = id |> string
         // let actor = [chordActor id_string ]
         nodes <- List.append nodes [id]
     // listOfActors <- List.append listOfActors actor 
 
-addNodesInArray
-printfn "%A" nodes
-generateKeys
 
-printfn "%A" keys
-printfn"Printing list"
-findClosestNode
-printfn "%A" nodeMappings
-for item in nodeMappings do
-    printfn "%A" item
+[<EntryPoint>]
+let main argv = 
+    numOfNodes <- (int argv.[0])
+    printfn "Num of nodes: %i" numOfNodes
+    addNodesInArray()
+    printfn "Nodes: %A" nodes
+    generateKeys()
 
-let input2 = System.Console.ReadLine() |> ignore
+    printfn "%A" keys
+    printfn"Printing list"
+    findClosestNode()
+    printfn "%A" nodeMappings
+    for item in nodeMappings do
+        printfn "%A" item
+    System.Console.ReadLine() |> ignore
+    0 // return an integer exit code
+

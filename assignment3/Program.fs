@@ -1,12 +1,128 @@
-
 open System
-// Define a new function to print a name.
-// It must be defined before it is called in the main function.
-let printGreeting name =
-    printfn "Hello %s from F#!" name
+//open System.IO
+open System.Security.Cryptography
+open System.Text;
+open System.Diagnostics
+#r "nuget: Akka.FSharp" 
+#r "nuget: Akka.TestKit" 
+open Akka.Configuration
+open Akka.FSharp
+//open type System.Math; 
+open System.Collections.Generic 
+open Akka.Actor
+
+let system = System.create "my-system" <| ConfigurationFactory.Default()
+
+type Message =
+    | Message of string
+
+let mutable numOfNodes = 0
+(*
+printfn "input ready"
+let inputLine = Console.ReadLine() 
+let splitLine = (fun (line : string) -> Seq.toList (line.Split ' '))
+let inputParams = splitLine inputLine
+let numOfNodes = inputParams.[0] |> int
+let topology = inputParams.[1]
+let alg = inputParams.[2]
+
+let proc = Process.GetCurrentProcess()
+let cpuTime = proc.TotalProcessorTime
+let sw = Stopwatch.StartNew()
+*)
+(*
+*)
+let convertToSHA1 (arg: string) =
+    System.Text.Encoding.ASCII.GetBytes arg |> (new SHA1Managed()).ComputeHash
+
+let convertBackToString (sha1: byte[]) =
+    BitConverter.ToString(sha1).Replace("-", "")
+
+
+
+
+// let mutable listOfActors = []
+let mutable keys = []
+let mutable nodes = [] 
+let mutable (nodeMappings: int array array) = [|[||]|]
+let m = 6.0
+let chordActor (id:string) (topologyPosition:int list) = spawn system id <| fun mailbox ->
+    
+    let rec loop() = actor {
+        let! msg = mailbox.Receive() 
+        let sender = mailbox.Sender() 
+        
+
+        // handle an incoming message
+        return! loop() // store the new s,w into the next state of the actor
+    }
+    loop()  
+
+let rec getNodeId = 
+    let max = 2.0**m - 1.0
+    let random = Random()
+   
+    let nodeId = random.Next((int max))
+    nodeId 
+
+let rec identify (key:int) (index:int) = 
+    if (index >= nodes.Length)
+    then nodes.[0]
+    elif key >= nodes.[index]
+    then nodes.[index]
+    else identify key (index+1)
+
+let rec map (key:int) (nodeForKey:int) (index: int)=
+    if (index >= nodeMappings.Length)
+    then nodeMappings <- Array.append nodeMappings [|[|nodeForKey; key|]|]
+    else if (nodeForKey = nodeMappings.[index].[0])
+    then nodeMappings.[index] <- Array.append nodeMappings.[index] [|key|]
+    else map key nodeForKey (index+1)
+
+
+let findClosestNode = 
+    printfn "here!!"
+    printfn "%A" keys
+    for k in keys do
+        printfn "here"
+        let nodeForKey = identify k 0
+        map k nodeForKey 0
+    nodeMappings
+
+let generateKeys =
+    for k in 0..numOfNodes/2 do
+        let keyInitializer = getNodeId
+        // let hash = convertBackToString(convertToSHA1(keyInitializer |> string))
+        // printfn "%i" keyInitializer
+        keys <- List.append keys [keyInitializer]
+    keys
+
+
+let addNodesInArray = 
+    printfn "numOfNodes2 : %i" numOfNodes
+    for n in 0..numOfNodes do
+        printfn"here"
+        let id = getNodeId
+        // let id_string = id |> string
+        // let actor = [chordActor id_string ]
+        nodes <- List.append nodes [id]
+    // listOfActors <- List.append listOfActors actor 
+
 
 [<EntryPoint>]
-let main argv =
-    // Call your new function!
-    printGreeting "Logan"
+let main argv = 
+    numOfNodes <- (int argv.[0])
+    printfn "Num of nodes: %i" numOfNodes
+    addNodesInArray
+    printfn "Nodes: %A" nodes
+    (*generateKeys
+
+    printfn "%A" keys
+    printfn"Printing list"
+    findClosestNode
+    printfn "%A" nodeMappings
+    for item in nodeMappings do
+        printfn "%A" item*)
+    let input2 = System.Console.ReadLine() |> ignore
     0 // return an integer exit code
+
