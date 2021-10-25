@@ -28,18 +28,9 @@ let convertBackToString (sha1: byte[]) =
 let mutable keys = []
 let mutable nodes = [] 
 let mutable (nodeMappings: int array array) = [||]
+let mutable actorList = []
 let m = 6.0
-let chordActor (id:string) (topologyPosition:int list) = spawn system id <| fun mailbox ->
-    
-    let rec loop() = actor {
-        let! msg = mailbox.Receive() 
-        let sender = mailbox.Sender() 
-        
 
-        // handle an incoming message
-        return! loop() // store the new s,w into the next state of the actor
-    }
-    loop()  
 
 let getNodeId() = 
     let max = 2.0**m - 1.0
@@ -86,19 +77,59 @@ let addNodesInArray ()=
         let id = getNodeId()
         // let id_string = id |> string
         // let actor = [chordActor id_string ]
-        nodes <- List.append nodes [id]
+        // Preventing duplicates
+        if (not (List.contains id nodes))
+        then nodes <- List.append nodes [id]
     // listOfActors <- List.append listOfActors actor 
 
+let chordActor (id:string) (keyList: (int*string) list) successor = spawn system id <| fun mailbox ->
+    printfn "Created actor with id: %s." id 
+    printfn "My keys are: %A" keyList
+    printfn "My successor is located at %i, and is %i" (fst(successor)) (snd(successor))
+    printfn "==================="
+
+    let rec loop() = actor {
+        let! msg = mailbox.Receive() 
+        let sender = mailbox.Sender() 
+        
+
+        // handle an incoming message
+        return! loop() // store the new s,w into the next state of the actor
+    }
+    loop()  
+
+let createActors() = 
+    let sortedNodes = List.sort nodes
+    printfn "Sorted Nodes: %A" sortedNodes
+    printfn "==============================="
+    let mutable index = 0
+    for node in sortedNodes do
+        let mutable pairList = []
+        for keyList in nodeMappings do
+            if (keyList.[0] = node) then 
+                for i in 1 .. keyList.Length-1 do 
+                    pairList <- List.append pairList [(keyList.[i], convertBackToString(convertToSHA1(string keyList.[i])))]
+        if (index = sortedNodes.Length-1)
+        then actorList <- List.append actorList [chordActor (string node) pairList (0, sortedNodes.[0])]
+        else actorList <- List.append actorList [chordActor (string node) pairList (index + 1, sortedNodes.[index+1])]
+        index <- index + 1
+        Threading.Thread.Sleep(500)
+    0    
+
+// [55; 54; 28]
+// 
 
 [<EntryPoint>]
 let main argv = 
     numOfNodes <- (int argv.[0])
     addNodesInArray()
+    printfn "Nodes: %A" nodes
     generateKeys()
-    printfn "%A" keys
+    printfn "Keys: %A" keys
     // printfn"Printing list"
     findClosestNode()
-    printfn "%A" nodeMappings
+    printfn "Mappings: %A" nodeMappings
+    createActors()
     // The KeyValue Mappings are in nodeMappings [|55; 24; 28|] [|9;5|].. to access 55 you would do nodeMappings.[0].[0]
     System.Console.ReadLine() |> ignore
     0 // return an integer exit code
