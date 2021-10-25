@@ -12,25 +12,22 @@ open Akka.Actor
 let system = ActorSystem.Create("FSharp")
 
 type Message =
-    | Message of string
+    | Successor of string * int
 
 let mutable numOfNodes = 0
-let convertToSHA1 (arg: string) =
-    System.Text.Encoding.ASCII.GetBytes arg |> (new SHA1Managed()).ComputeHash
-
-let convertBackToString (sha1: byte[]) =
-    BitConverter.ToString(sha1).Replace("-", "")
-
-
-
-
 // let mutable listOfActors = []
 let mutable keys = []
 let mutable nodes = [] 
 let mutable (nodeMappings: int array array) = [||]
 let mutable actorList = []
 let m = 6.0
+let mutable numOfRequests = 0 // init inputted value
 
+let convertToSHA1 (arg: string) =
+    System.Text.Encoding.ASCII.GetBytes arg |> (new SHA1Managed()).ComputeHash
+
+let convertBackToString (sha1: byte[]) =
+    BitConverter.ToString(sha1).Replace("-", "")
 
 let getNodeId() = 
     let max = 2.0**m - 1.0
@@ -88,15 +85,34 @@ let chordActor (id:string) (keyList: (int*string) list) successor = spawn system
     printfn "My successor is located at %i, and is %i" (fst(successor)) (snd(successor))
     printfn "==================="
 
-    let rec loop() = actor {
+    let rec loop( (currentRequests:int)) = actor {
         let! msg = mailbox.Receive() 
-        let sender = mailbox.Sender() 
-        
+        let sender = mailbox.Sender()
+
+        match msg with
+            | Successor(keyHash,hops) -> 
+                let newHops = hops+1
+                let mutable keyFound = false
+                for (k,hash) in keyList do 
+                    if keyHash = hash
+                    then 
+                        keyFound <- true
+                if keyFound
+                then printfn "key found after %d hops" newHops 
+                else 
+                    // send request every second
+                    system.Scheduler.Advanced.ScheduleRepeatedly (TimeSpan.FromMilliseconds 0., TimeSpan.FromMilliseconds(1000.), fun () -> 
+                        if currentRequests < numOfRequests
+                        then actorList.[fst(successor)] <! Successor(keyHash,newHops) 
+                        else mailbox.Context.System.Terminate() |> ignore // stop the actor after it makes a certain amount of requests
+                    ) 
+            //| _ -> printfn "incorrect message"
+
 
         // handle an incoming message
-        return! loop() // store the new s,w into the next state of the actor
+        return! loop(currentRequests) // store the new s,w into the next state of the actor
     }
-    loop()  
+    loop(0)  
 
 let createActors() = 
     let sortedNodes = List.sort nodes
@@ -122,14 +138,15 @@ let createActors() =
 [<EntryPoint>]
 let main argv = 
     numOfNodes <- (int argv.[0])
+    numOfRequests <- (int argv.[1])
     addNodesInArray()
     printfn "Nodes: %A" nodes
-    generateKeys()
+    generateKeys() |> ignore
     printfn "Keys: %A" keys
     // printfn"Printing list"
-    findClosestNode()
+    findClosestNode() |> ignore
     printfn "Mappings: %A" nodeMappings
-    createActors()
+    createActors() |> ignore
     // The KeyValue Mappings are in nodeMappings [|55; 24; 28|] [|9;5|].. to access 55 you would do nodeMappings.[0].[0]
     System.Console.ReadLine() |> ignore
     0 // return an integer exit code

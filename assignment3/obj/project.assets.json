@@ -1453,11 +1453,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "/home/logancundiff/Documents/GitHub/COP5615/assignment2/assignment2.fsproj",
-      "projectName": "assignment2",
-      "projectPath": "/home/logancundiff/Documents/GitHub/COP5615/assignment2/assignment2.fsproj",
+      "projectUniqueName": "/home/logancundiff/Documents/GitHub/COP5615/assignment3/assignment3.fsproj",
+      "projectName": "assignment3",
+      "projectPath": "/home/logancundiff/Documents/GitHub/COP5615/assignment3/assignment3.fsproj",
       "packagesPath": "/home/logancundiff/.nuget/packages/",
-      "outputPath": "/home/logancundiff/Documents/GitHub/COP5615/assignment2/obj/",
+      "outputPath": "/home/logancundiff/Documents/GitHub/COP5615/assignment3/obj/",
       "projectStyle": "PackageReference",
       "configFilePaths": [
         "/home/logancundiff/.nuget/NuGet/NuGet.Config"
@@ -1506,7 +1506,7 @@
             "privateAssets": "all"
           }
         },
-        "runtimeIdentifierGraphPath": "/usr/share/dotnet/sdk/5.0.401/RuntimeIdentifierGraph.json"
+        "runtimeIdentifierGraphPath": "/usr/share/dotnet/sdk/5.0.402/RuntimeIdentifierGraph.json"
       }
     }
   }
