@@ -95,11 +95,11 @@ let main argv =
     numOfNodes <- (int argv.[0])
     addNodesInArray()
     generateKeys()
-
     printfn "%A" keys
-    printfn"Printing list"
+    // printfn"Printing list"
     findClosestNode()
     printfn "%A" nodeMappings
+    // The KeyValue Mappings are in nodeMappings [|55; 24; 28|] [|9;5|].. to access 55 you would do nodeMappings.[0].[0]
     System.Console.ReadLine() |> ignore
     0 // return an integer exit code
 
