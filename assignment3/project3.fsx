@@ -27,6 +27,8 @@ let mutable numOfRequests = 0 // init inputted value
 let mutable sendRequests = false
 let mutable (hopsList:int list) = []
 let _lock = Object()
+let random = Random() 
+let maxKey = 2.0**m - 1.0
 
 let convertToSHA1 (arg: string) =
     System.Text.Encoding.ASCII.GetBytes arg |> (new SHA1Managed()).ComputeHash
@@ -42,9 +44,8 @@ let getNodeId() =
     let mutable check = true 
     let mutable nodeId = "" 
     while check do
-        let max = 2.0**m - 1.0
         let random = Random()
-        let x =  random.Next(int max)
+        let x =  random.Next(int maxKey)
         nodeId <- SHA1(string x)
         if (not (List.contains nodeId nodes))
         then
@@ -83,7 +84,6 @@ let findClosestNode ()=
     nodeMappings
     
 let getRandomKey(keyList) = 
-    let random = Random() 
     let mutable key = ""
     let mutable check = true 
     while check do 
@@ -95,7 +95,7 @@ let getRandomKey(keyList) =
             then 
                 keyFound <- true
             // printfn "Added new one %d" nodeId
-        if keyFound = false
+        if not keyFound
         then check <- false
     key
 
@@ -210,9 +210,13 @@ let createActors() =
 
 // [55; 54; 28]
 // will start process of searching for keys
-let findKeys () = 
+let findKey () = 
     let sortedNodes = List.sort nodes
-    actorList.[0] <! Successor(sortedNodes.[0], keys.[0],0) // no idea how to figure out which key to find
+    let randomKey = random.Next(keys.Length-1)
+    let randomNode = random.Next(sortedNodes.Length-1)
+    actorList.[randomNode] <! Successor(sortedNodes.[randomNode], keys.[randomKey],0) 
+
+
 
 [<EntryPoint>]
 let main argv = 
@@ -231,7 +235,7 @@ let main argv =
     printfn "Mappings: %A" nodeMappings
     createActors() |> ignore
     printfn "Finished making actors."
-    findKeys() |> ignore
+    findKey() |> ignore
     sendRequests <- true
     // The KeyValue Mappings are in nodeMappings [|55; 24; 28|] [|9;5|].. to access 55 you would do nodeMappings.[0].[0]
     System.Console.ReadLine() |> ignore
