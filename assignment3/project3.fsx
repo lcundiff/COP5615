@@ -19,6 +19,7 @@ let mutable numOfNodes = 0
 let mutable (keys: string list)= []
 // list of nodes in SHA1 form
 let mutable (nodes: string list) = [] 
+let mutable (nodesInt : int list) = []
 let mutable (nodeMappings: string array array) = [||]
 let mutable actorList = []
 let m = 13.0
@@ -43,12 +44,16 @@ let getNodeId() =
     while check do
         let max = 2.0**m - 1.0
         let random = Random()
-   
-        nodeId <- SHA1(random.Next((int max)) |> string)
+        let x =  random.Next(int max)
+        nodeId <- SHA1(string x)
         if (not (List.contains nodeId nodes))
         then
+            if (not (List.contains x nodesInt))
+            then 
+                nodesInt <- List.append nodesInt [x]
+                check <- false
+
             // printfn "Added new one %d" nodeId
-            check <- false
     nodeId 
 
 let rec identify (key:string) (sortedNodes:string list) (index:int) = 
