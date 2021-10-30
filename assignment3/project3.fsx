@@ -17,10 +17,13 @@ type Message =
 let mutable numOfNodes = 0
 // list of keys in SHA1 form
 let mutable (keys: string list)= []
+let mutable (nodesAndHashesList: (int * string) list) = []
+let mutable (keysAndHashesList: (int * string) list) = []
 // list of nodes in SHA1 form
 let mutable (nodes: string list) = [] 
 let mutable (nodesInt : int list) = []
 let mutable (nodeMappings: string array array) = [||]
+let mutable (nodePairMappings: (int * string) array array) = [||]
 let mutable actorList = []
 let m = 13.0
 let mutable numOfRequests = 0 // init inputted value
@@ -41,7 +44,7 @@ let SHA1 (arg: string) =
     let x = convertBackToString(convertToSHA1(arg))
     x
 
-let getNodeId() = 
+let getNodes() = 
     let mutable check = true 
     let mutable nodeId = "" 
     while check do
@@ -50,32 +53,64 @@ let getNodeId() =
         nodeId <- SHA1(string x)
         if (not (List.contains nodeId nodes))
         then
-            if (not (List.contains x nodesInt))
-            then 
-                nodesInt <- List.append nodesInt [x]
-                check <- false
+            nodesAndHashesList <- List.append nodesAndHashesList [(x, nodeId)]
+            nodes <- List.append nodes [nodeId]
+            check <- false
+
+let getKeys() = 
+    let mutable check = true 
+    let mutable keyId = "" 
+    while check do
+        let random = Random()
+        let x =  random.Next(int maxEntries)
+        keyId <- SHA1(string x)
+        if (not (List.contains keyId keys))
+        then
+            keys <- List.append keys [keyId]
+            keysAndHashesList <- List.append keysAndHashesList [(x, keyId)]
+            check <- false
 
             // printfn "Added new one %d" nodeId
-    nodeId 
-// gives you a node hash for a respective key (which node the key should be on)
+    keyId 
+// gives you a node hash for a respective key (which node the key should be on
+(*
 let rec identify (key:string) (sortedNodes:string list) (index:int) = 
     if (index >= sortedNodes.Length)
     then sortedNodes.[0]
     elif sortedNodes.[index] >= key
     then sortedNodes.[index]
     else identify key sortedNodes (index+1)
+*)
 
+let rec identify (key: (int * string)) (sortedNodes: (int * string) list) (index: int) = 
+    if (index >= sortedNodes.Length)
+    then sortedNodes.[0] 
+    elif snd(sortedNodes.[index]) >= snd(key)
+    then sortedNodes.[index]
+    else identify key sortedNodes (index + 1)
+(*
 let rec map (key:string) (nodeForKey:string) (index: int)=
     if (index >= nodeMappings.Length)
     then nodeMappings <- Array.append nodeMappings [|[|nodeForKey; key|]|]
     elif (nodeForKey = nodeMappings.[index].[0])
     then nodeMappings.[index] <- Array.append nodeMappings.[index] [|key|]
     else map key nodeForKey (index+1)
+*)
+let rec map (key: (int * string)) (nodeForKey: (int * string)) (index: int)=
+    if (index >= nodePairMappings.Length)
+    then nodePairMappings <- Array.append nodePairMappings [|[|nodeForKey; key|]|]
+    elif (snd(nodeForKey) = snd(nodePairMappings.[index].[0]))
+    then nodePairMappings.[index] <- Array.append nodePairMappings.[index] [|key|]
+    else map key nodeForKey (index+1)
 
+
+let sortPairList lst = 
+    lst |> List.sortByDescending (fun (x, _) -> x) |> List.rev
 
 // key = 63
 // node = 65
 // sortedNodes is in SHA1 form already
+(*
 let findClosestNode ()= 
     let sortedNodes = List.sort nodes
     for key in keys do
@@ -83,6 +118,16 @@ let findClosestNode ()=
         map key nodeForKey 0
         // [[0;120;125;130][1;1][8;2;4;6][65;62;63]]
     nodeMappings
+*)
+let findClosestNode ()= 
+    let sortedNodes = sortPairList nodesAndHashesList
+    for key in keysAndHashesList do 
+        let nodeForKey = identify key sortedNodes 0 // 65
+        map key nodeForKey 0
+        // [[0;120;125;130][1;1][8;2;4;6][65;62;63]]
+    nodePairMappings
+    
+
     
 let getRandomKey(keyList) = 
     let mutable key = ""
@@ -102,11 +147,11 @@ let getRandomKey(keyList) =
 
 let generateKeys ()=
     for k in 0..numOfNodes/2 do
-        let keyInitializer = getNodeId()
+        getKeys()
         // let hash = convertBackToString(convertToSHA1(keyInitializer |> string))
         // printfn "%i" keyInitializer
-        let x = SHA1(keyInitializer |> string)
-        keys <- List.append keys [x]
+        // let x = SHA1(keyInitializer |> string)
+        // keys <- List.append keys [x]
     keys
 
 let checkIfFinished() =
@@ -122,15 +167,16 @@ let checkIfFinished() =
 
 let addNodesInArray ()= 
     for n in 0..numOfNodes-1 do
-        let id = getNodeId()
+        getNodes()
         // let id_string = id |> string
         // let actor = [chordActor id_string ]
         // Preventing duplicates
         // if (not (List.contains id nodes))
        //  then 
-        let x = SHA1(id |> string)
-        nodes <- List.append nodes [x]
+        // let x = SHA1(id |> string)
+        // nodes <- List.append nodes [x]
     // listOfActors <- List.append listOfActors actor 
+    nodesAndHashesList
     
 let fingerTableInit (nodeId:int) = 
     let sortedNodes = List.sort nodes
@@ -263,12 +309,16 @@ let main argv =
 
     printfn "Keys: %A" keys
     printfn"Printing list"
+
+    printfn "nodesAndHashesList: %A" nodesAndHashesList
+    printfn "keysAndHashesList: %A" keysAndHashesList
+
     findClosestNode() |> ignore
     printfn "Finished mappings"
-    printfn "Mappings: %A" nodeMappings
-    createActors() |> ignore
+    printfn "Mappings: %A" nodePairMappings
+    // createActors() |> ignore
     printfn "Finished making actors."
-    findKey() |> ignore
+    // findKey() |> ignore
     sendRequests <- true
     // The KeyValue Mappings are in nodeMappings [|55; 24; 28|] [|9;5|].. to access 55 you would do nodeMappings.[0].[0]
     System.Console.ReadLine() |> ignore
