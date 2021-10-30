@@ -28,7 +28,8 @@ let mutable sendRequests = false
 let mutable (hopsList:int list) = []
 let _lock = Object()
 let random = Random() 
-let maxKey = 2.0**m - 1.0
+let maxEntries = 2.0**m - 1.0
+let mutable fingerTable = []
 
 let convertToSHA1 (arg: string) =
     System.Text.Encoding.ASCII.GetBytes arg |> (new SHA1Managed()).ComputeHash
@@ -45,7 +46,7 @@ let getNodeId() =
     let mutable nodeId = "" 
     while check do
         let random = Random()
-        let x =  random.Next(int maxKey)
+        let x =  random.Next(int maxEntries)
         nodeId <- SHA1(string x)
         if (not (List.contains nodeId nodes))
         then
@@ -56,7 +57,7 @@ let getNodeId() =
 
             // printfn "Added new one %d" nodeId
     nodeId 
-
+// gives you a node hash for a respective key (which node the key should be on)
 let rec identify (key:string) (sortedNodes:string list) (index:int) = 
     if (index >= sortedNodes.Length)
     then sortedNodes.[0]
@@ -130,6 +131,33 @@ let addNodesInArray ()=
         let x = SHA1(id |> string)
         nodes <- List.append nodes [x]
     // listOfActors <- List.append listOfActors actor 
+    
+let fingerTableInit (nodeId:int) = 
+    let sortedNodes = List.sort nodes
+    let mutable closestNodeIndex = 0 
+    for i in 0..int(m) do
+        let fingerEntry = int( float(nodeId) + (2.0**float(i) - 1.0))
+        let hashedRowId = SHA1(fingerEntry |> string)
+        if sortedNodes.[closestNodeIndex] < hashedRowId
+        then 
+            while sortedNodes.[closestNodeIndex] < hashedRowId && closestNodeIndex < sortedNodes.Length  do
+                closestNodeIndex <- closestNodeIndex + 1
+            if closestNodeIndex = sortedNodes.Length 
+            then closestNodeIndex <- 0
+
+        fingerTable <- List.append fingerTable [[fingerEntry;closestNodeIndex]] // it would be easier if we used number ids insead of hashes
+    fingerTable
+
+let getNodeFromFingerTable (currentNodeId:int) (keyId:string) = 
+    let nodeFingerTable = fingerTableInit(currentNodeId)
+    // let (fingerRow:string list) = fingerTable.[fingerIndex] // (finger index ; node index)
+    let mutable nextNodeIndex = 0
+    for f in nodeFingerTable do
+        let nodeIndex = f.[1] // ([0] -> 0..2^i - 1 ; [1] -> closest node index)
+        let nodeHash = nodes.[nodeIndex]
+        if nodeHash > keyId
+        then nextNodeIndex <- nodeIndex
+    nextNodeIndex
 
 let chordActor (id:string) (keyList: (string*string) list) (successor: int * string) = spawn system id <| fun mailbox ->
     // printfn "Created actor with id: %s." id 
@@ -172,7 +200,10 @@ let chordActor (id:string) (keyList: (string*string) list) (successor: int * str
                             checkIfFinished()
                         )
                         // send request every second
-                    else actorList.[(fst(successor))] <! Successor(originalID, keyId, newHops)
+                    else 
+                        let nodeId = int(id) // this wont work because id needs to be a number, not a hash
+                        let nextNodeIndex = getNodeFromFingerTable nodeId keyId 
+                        actorList.[nextNodeIndex] <! Successor(originalID, keyId, newHops)
                 if (sendRequests) 
                 then
                     system.Scheduler.Advanced.ScheduleRepeatedly (TimeSpan.FromMilliseconds(0.0), TimeSpan.FromMilliseconds(1000.0), fun () -> 
@@ -207,6 +238,8 @@ let createActors() =
         index <- index + 1
         // Threading.Thread.Sleep(500)
     0    
+
+
 
 // [55; 54; 28]
 // will start process of searching for keys
