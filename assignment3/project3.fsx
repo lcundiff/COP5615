@@ -210,7 +210,7 @@ let chordActor (id: int) (keyList: int list) = spawn system (string id) <| fun m
                 let idHash = SHA1(id |> string)
                 // If we made it all the way back to the current user
                 // Then we can assume the id doesn't exist 
-                if (originalHash = idHash || hops > 25) // 
+                if (originalHash = idHash) // 
                 then
                     printf "at original node"
                     lock _lock (fun () -> 
