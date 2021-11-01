@@ -12,15 +12,16 @@ open Akka.Actor
 let system = ActorSystem.Create("FSharp")
 
 type Message =
-    | Successor of string * string * int // key * hopsCount
+    | Successor of int * string * int // key * hopsCount
 
 let mutable numOfNodes = 0
 // list of keys in SHA1 form
 let mutable (keys: string list)= []
 let mutable (nodesAndHashesList: (int * string) list) = []
 let mutable (keysAndHashesList: (int * string) list) = []
+let mutable (keysInt: int list) = []
 // list of nodes in SHA1 form
-let mutable (nodes: string list) = [] 
+let mutable (nodes: string list) = []  // node42 "DSHGFIOAHDIFOH2138Y9"
 let mutable (nodesInt : int list) = []
 let mutable (nodeMappings: string array array) = [||]
 let mutable (nodePairMappings: (int * string) array array) = [||]
@@ -32,7 +33,6 @@ let mutable (hopsList:int list) = []
 let _lock = Object()
 let random = Random() 
 let maxEntries = 2.0**m - 1.0
-let mutable fingerTable = []
 
 let convertToSHA1 (arg: string) =
     System.Text.Encoding.ASCII.GetBytes arg |> (new SHA1Managed()).ComputeHash
@@ -55,6 +55,7 @@ let getNodes() =
         then
             nodesAndHashesList <- List.append nodesAndHashesList [(x, nodeId)]
             nodes <- List.append nodes [nodeId]
+            nodesInt <- List.append nodesInt [x]
             check <- false
 
 let getKeys() = 
@@ -68,6 +69,7 @@ let getKeys() =
         then
             keys <- List.append keys [keyId]
             keysAndHashesList <- List.append keysAndHashesList [(x, keyId)]
+            keysInt <- List.append keysInt [x]
             check <- false
 
             // printfn "Added new one %d" nodeId
@@ -81,11 +83,11 @@ let rec identify (key:string) (sortedNodes:string list) (index:int) =
     then sortedNodes.[index]
     else identify key sortedNodes (index+1)
 *)
-
+// Identify is used to find the node that the key should go to.
 let rec identify (key: (int * string)) (sortedNodes: (int * string) list) (index: int) = 
     if (index >= sortedNodes.Length)
     then sortedNodes.[0] 
-    elif snd(sortedNodes.[index]) >= snd(key)
+    elif fst(sortedNodes.[index]) >= fst(key)
     then sortedNodes.[index]
     else identify key sortedNodes (index + 1)
 (*
@@ -96,10 +98,13 @@ let rec map (key:string) (nodeForKey:string) (index: int)=
     then nodeMappings.[index] <- Array.append nodeMappings.[index] [|key|]
     else map key nodeForKey (index+1)
 *)
+// Map is used to attach that key to the node.
+// nodePairMappings = [|[|nodeForKey, key, key, key|]; |]
+
 let rec map (key: (int * string)) (nodeForKey: (int * string)) (index: int)=
     if (index >= nodePairMappings.Length)
     then nodePairMappings <- Array.append nodePairMappings [|[|nodeForKey; key|]|]
-    elif (snd(nodeForKey) = snd(nodePairMappings.[index].[0]))
+    elif (fst(nodeForKey) = fst(nodePairMappings.[index].[0]))
     then nodePairMappings.[index] <- Array.append nodePairMappings.[index] [|key|]
     else map key nodeForKey (index+1)
 
@@ -120,15 +125,22 @@ let findClosestNode ()=
     nodeMappings
 *)
 let findClosestNode ()= 
-    let sortedNodes = sortPairList nodesAndHashesList
+    let sortedNodes = sortPairList nodesAndHashesList 
     for key in keysAndHashesList do 
         let nodeForKey = identify key sortedNodes 0 // 65
         map key nodeForKey 0
-        // [[0;120;125;130][1;1][8;2;4;6][65;62;63]]
+        // [[0;120;125;130][1;1][(][65;62;63]]
+    for eachNode in sortedNodes do
+        let mutable isFound = false
+        for eachPair in nodePairMappings do 
+            if (fst(eachNode) = fst(eachPair.[0]))
+            then isFound <- true
+        if (not isFound)
+        then nodePairMappings <- Array.append nodePairMappings [|[|eachNode|]|]
     nodePairMappings
     
-
     
+// keyList is used to make sure we aren't checking for a key that we already have
 let getRandomKey(keyList) = 
     let mutable key = ""
     let mutable check = true 
@@ -137,7 +149,7 @@ let getRandomKey(keyList) =
         let mutable keyFound = false
         // keyList has a id and a key hash
         for (k,hash) in keyList do // check if current node contains key we are looking for
-            if k = key
+            if hash = key
             then 
                 keyFound <- true
             // printfn "Added new one %d" nodeId
@@ -179,14 +191,15 @@ let addNodesInArray ()=
     nodesAndHashesList
     
 let fingerTableInit (nodeId:int) = 
-    let sortedNodes = List.sort nodes
+    let mutable fingerTable = []
+    let sortedNodes = List.sort nodesInt // [a list of hashes]
     let mutable closestNodeIndex = 0 
     for i in 0..int(m) do
         let fingerEntry = int( float(nodeId) + (2.0**float(i) - 1.0))
         let hashedRowId = SHA1(fingerEntry |> string)
-        if sortedNodes.[closestNodeIndex] < hashedRowId
+        if sortedNodes.[closestNodeIndex] < fingerEntry
         then 
-            while sortedNodes.[closestNodeIndex] < hashedRowId && closestNodeIndex < sortedNodes.Length  do
+            while closestNodeIndex < sortedNodes.Length && sortedNodes.[closestNodeIndex] < fingerEntry do
                 closestNodeIndex <- closestNodeIndex + 1
             if closestNodeIndex = sortedNodes.Length 
             then closestNodeIndex <- 0
@@ -205,7 +218,7 @@ let getNodeFromFingerTable (currentNodeId:int) (keyId:string) =
         then nextNodeIndex <- nodeIndex
     nextNodeIndex
 
-let chordActor (id:string) (keyList: (string*string) list) (successor: int * string) = spawn system id <| fun mailbox ->
+let chordActor (id:(int * string)) (keyList: (int*string) list) (successor: int * int) = spawn system (snd(id)) <| fun mailbox ->
     // printfn "Created actor with id: %s." id 
     // printfn "My keys are: %A" keyList
     // printfn "My successor is located at %i, and is %i" (fst(successor)) (snd(successor))
@@ -220,9 +233,9 @@ let chordActor (id:string) (keyList: (string*string) list) (successor: int * str
                 let keyHash = convertBackToString(convertToSHA1(keyId)) // should we be comparing key hash or the key id? adding this for now
                 // printfn "Actor: %s recieved key query for %d" id keyId
                 let newHops = hops+1 // keep track of how many hops it takes to find key by itterating by 1
-                let originalHash = convertBackToString(convertToSHA1(originalID))
-                let idHash = convertBackToString(convertToSHA1(id))
-                if (originalHash = idHash)
+                let originalHash = convertBackToString(convertToSHA1(string originalID))
+                // let idHash = convertBackToString(convertToSHA1(id))
+                if (originalHash = snd(id))
                 then
                     lock _lock (fun () -> 
                         hopsList <- List.append hopsList [newHops]
@@ -234,10 +247,13 @@ let chordActor (id:string) (keyList: (string*string) list) (successor: int * str
                 else 
                     let mutable keyFound = false
                     // keyList has a id and a key hash
-                    for (k,hash) in keyList do // check if current node contains key we are looking for
-                        if keyHash = hash
-                        then 
-                            keyFound <- true
+                    // printfn "Node: %s. KeyList Length: %d" (string (fst(id))) keyList.Length
+                    if keyList.Length > 0 then 
+                        for x in keyList do // check if current node contains key we are looking for
+                            // printfn "Hash: %s" (snd(x))
+                            if keyHash = snd(x)
+                            then 
+                                keyFound <- true
                     if keyFound
                     then 
                         lock _lock (fun () -> 
@@ -247,17 +263,22 @@ let chordActor (id:string) (keyList: (string*string) list) (successor: int * str
                         )
                         // send request every second
                     else 
-                        let nodeId = int(id) // this wont work because id needs to be a number, not a hash
+                        let nodeId = fst(id) // this wont work because id needs to be a number, not a hash
                         let nextNodeIndex = getNodeFromFingerTable nodeId keyId 
+                        printfn "Next Node Index: %d" nextNodeIndex
                         actorList.[nextNodeIndex] <! Successor(originalID, keyId, newHops)
                 if (sendRequests) 
                 then
                     system.Scheduler.Advanced.ScheduleRepeatedly (TimeSpan.FromMilliseconds(0.0), TimeSpan.FromMilliseconds(1000.0), fun () -> 
                         if sentRequests < numOfRequests
                         then
+                            // find it in the finger table
+                            // here too.
                             let randomKey = getRandomKey(keyList)
+                            let nodeId = fst(id) // this wont work because id needs to be a number, not a hash
+                            let nextNodeIndex = getNodeFromFingerTable nodeId keyId 
                             sentRequests <- sentRequests + 1
-                            actorList.[fst(successor)] <! Successor(id, randomKey,0) 
+                            actorList.[nextNodeIndex] <! Successor(originalID, keyId, newHops)
                             // else mailbox.Context.System.Terminate() |> ignore // stop the actor after it makes a certain amount of requests
                     ) 
 
@@ -268,20 +289,31 @@ let chordActor (id:string) (keyList: (string*string) list) (successor: int * str
     loop()  
 
 let createActors() = 
-    let sortedNodes = List.sort nodes
+    let sortedNodes = List.sort nodesInt // [42; 55; 12; 52] -> [12; 42; 52; 55]
+    printfn "Sorted Nodes: %A" sortedNodes
+    printfn "nodePairMappings: %A" nodePairMappings
     // printfn "Sorted Nodes: %A" sortedNodes
     // printfn "==============================="
     let mutable index = 0
+    let mutable nodeId = 0
+    let mutable nodeHash = ""
+    // for node in sortedNodes [12; 42; 52; 55] ...
     for node in sortedNodes do
         let mutable pairList = []
-        for keyList in nodeMappings do
-            if (keyList.[0] = node) then 
+        // for keyList in mapping [2983, "8A0FDF.."; ..|]
+        for keyList in nodePairMappings do
+            let mappedNode = fst(keyList.[0])
+            if (mappedNode = node) then 
+                nodeId <- fst(keyList.[0])
+                nodeHash <- snd(keyList.[0])
                 for i in 1 .. keyList.Length-1 do 
-                    pairList <- List.append pairList [(keyList.[i], convertBackToString(convertToSHA1(string keyList.[i])))]
+                    pairList <- List.append pairList [keyList.[i]]
         if (index = sortedNodes.Length-1)
-        then actorList <- List.append actorList [chordActor (string node) pairList (0, sortedNodes.[0])]
-        else actorList <- List.append actorList [chordActor (string node) pairList (index + 1, sortedNodes.[index+1])]
+        then actorList <- List.append actorList [chordActor (nodeId, nodeHash) pairList (0, sortedNodes.[0])] //node ID + hash pair instead of string node.
+        else actorList <- List.append actorList [chordActor (nodeId, nodeHash) pairList (index + 1, sortedNodes.[index+1])]
         index <- index + 1
+        nodeHash <- ""
+        nodeId <- -1
         // Threading.Thread.Sleep(500)
     0    
 
@@ -290,7 +322,7 @@ let createActors() =
 // [55; 54; 28]
 // will start process of searching for keys
 let findKey () = 
-    let sortedNodes = List.sort nodes
+    let sortedNodes = List.sort nodesInt
     let randomKey = random.Next(keys.Length-1)
     let randomNode = random.Next(sortedNodes.Length-1)
     actorList.[randomNode] <! Successor(sortedNodes.[randomNode], keys.[randomKey],0) 
@@ -316,9 +348,9 @@ let main argv =
     findClosestNode() |> ignore
     printfn "Finished mappings"
     printfn "Mappings: %A" nodePairMappings
-    // createActors() |> ignore
+    createActors() |> ignore
     printfn "Finished making actors."
-    // findKey() |> ignore
+    findKey() |> ignore
     sendRequests <- true
     // The KeyValue Mappings are in nodeMappings [|55; 24; 28|] [|9;5|].. to access 55 you would do nodeMappings.[0].[0]
     System.Console.ReadLine() |> ignore
