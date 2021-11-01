@@ -108,6 +108,7 @@ let getRandomKey(keyList) =
     key
 
 let checkIfFinished() =
+    printf "\ntotal requests: %i" hopsList.Length
     if (hopsList.Length >= (numOfNodes * numOfRequests))
     then 
         let mutable sum = 0
@@ -128,41 +129,53 @@ let fingerTableInit (nodeId:int) =
             let finger = int(( float(nodeId) + (2.0**float(i-1)) ) % (2.0**m)) 
             let hashedRowId = SHA1(finger |> string)
             if sortedNodes.[closestNodeIndex] < finger
-            then 
+            then // keep checking nodes until theres a node bigger than current finger, or we reach final node
                 while closestNodeIndex < sortedNodes.Length && sortedNodes.[closestNodeIndex] < finger do
                     closestNodeIndex <- closestNodeIndex + 1
-                //if closestNodeIndex = sortedNodes.Length 
-                //then closestNodeIndex <- 0
-            if closestNodeIndex > 0 && closestNodeIndex < sortedNodes.Length
+                if closestNodeIndex = sortedNodes.Length // if there are no nodes bigger than finger, than map finger to 1st index
+                then closestNodeIndex <- 0
+            fingerTable <- List.append fingerTable [closestNodeIndex] 
+            //if closestNodeIndex > 0 && closestNodeIndex < sortedNodes.Length
             //then fingerTable <- List.append fingerTable [[fingerEntry;closestNodeIndex]] // it would be easier if we used number ids insead of hashes
-            then fingerTable <- List.append fingerTable [closestNodeIndex] 
+            //then fingerTable <- List.append fingerTable [closestNodeIndex] 
     fingerTable
 
 let getNodeFromFingerTable (currentNodeId:int) (keyId:int) = 
-    let nodeFingerTable = fingerTableInit(currentNodeId)
-    let sortedNodes = List.sort nodes
-    let mutable nextNodeIndex = 0
-    let mutable fingerRowCount = 0
     //printfn "Mappings: %A" mappings
     //printf " finger table %A nodeid: %i" nodeFingerTable currentNodeId
-    for nodeIndex in nodeFingerTable do
-        let nodeId = sortedNodes.[nodeIndex]
-        if nodeId > keyId && nextNodeIndex = 0 // 0 indicates node hasnt been found
-        then 
-            //printf "nodeIndex: %i 1st index %i" nodeIndex nodeFingerTable.[0].[1]
-            if fingerRowCount = 0 // 1st row of finger table successor
-            then 
-                //printf "next node (successor): %i key id %i" nodeId keyId
-                nextNodeIndex <- nodeIndex
-            else
-                //printf "next node: %i key id %i" nodeId keyId
-                nextNodeIndex <- nodeFingerTable.[fingerRowCount-1] // overshot the keyid, so we got to previous node and check that finger table (unless key is there)
-        elif fingerRowCount = nodeFingerTable.Length - 1 && nextNodeIndex = 0 // if at end of finger table, route to here
-        then 
-            //printf "End of finger table. NodeId: %i keyId: %i" nodeId keyId
-            nextNodeIndex <- nodeIndex              
-        fingerRowCount <- fingerRowCount + 1
+    let nodeFingerTable = fingerTableInit(currentNodeId)
+    let sortedNodes = List.sort nodes
+    let mutable nextNodeIndex = -1
+    let mutable fingerRowCount = 0
 
+    // psuedocode from paper: "if (id E (n, id)] return successor;"
+    let successorIndex = nodeFingerTable.[0] // 1st row of finger table is the successor
+    let successorId = sortedNodes.[successorIndex]
+    // IF key is between node and successor 
+    // 1st edge case: IF key is mapped to 1st node 
+    // 2nd edge case: IF key is greater than or equal N1 and current node is final node in list
+    if (currentNodeId < keyId && successorId > keyId) || (currentNodeId < keyId && successorIndex = 0) || (successorIndex = 0 && successorId > keyId)
+    then nextNodeIndex <- nodeFingerTable.[0] // successor has key
+    (* psuedocode from paper: 
+        for i = m downto 1
+            if (finger[i] E (n, id)) // finger is "in between" node and id
+            return finger[i];
+            return n; 
+    *)
+    for i = nodeFingerTable.Length-1 downto 0 do
+        let nodeIndex = nodeFingerTable.[i]
+        let nodeId = sortedNodes.[nodeIndex]
+        // need to calculate if finger is "in between" node and id: 
+        // if the finger table node is less than key AND it is greater than current node (UNLESS the key is also less than current node)
+        if nodeId < keyId && (nodeId > currentNodeId || keyId < currentNodeId) && nextNodeIndex = -1 // 0 indicates node hasnt been found
+        then 
+            printf "\n next node: %i key id %i current node: %i" nodeFingerTable.[i] keyId currentNodeId
+            nextNodeIndex <- nodeIndex // this node is largest nodeid in finger table that is less than the key            
+
+    if nextNodeIndex = -1 // if looped through finger table but no node was less than key
+    then 
+        printf "\n No node matched. next node: %i keyId: %i current node: %i" sortedNodes.[nodeFingerTable.[nodeFingerTable.Length-1]] keyId currentNodeId
+        nextNodeIndex <- nodeFingerTable.[nodeFingerTable.Length-1]
     nextNodeIndex
 
 let delete id (keyList : int list) =
@@ -180,11 +193,12 @@ let chordActor (id: int) (keyList: int list) = spawn system (string id) <| fun m
     // printfn "My keys are: %A" keyList
     // printfn "My successor is located at %i, and is %i" (fst(successor)) (snd(successor))
     // printfn "==================="
-    let mutable sentRequests = 0
+    //let mutable sentRequests = 0
     let mutable integratedKeyList = keyList
-    let rec loop() = actor {
+    let rec loop(sentRequests) = actor {
         let! msg = mailbox.Receive() 
         let sender = mailbox.Sender()
+        //let mutable req = sentRequests
         //printf "message recieved"
         match msg with
             | Update(newKeysToAdd) ->
@@ -196,8 +210,9 @@ let chordActor (id: int) (keyList: int list) = spawn system (string id) <| fun m
                 let idHash = SHA1(id |> string)
                 // If we made it all the way back to the current user
                 // Then we can assume the id doesn't exist 
-                if (originalHash = idHash)
+                if (originalHash = idHash || hops > 25) // 
                 then
+                    printf "at original node"
                     lock _lock (fun () -> 
                         hopsList <- List.append hopsList [newHops]
                         // printfn "Key not found after %d hops" newHops
@@ -231,20 +246,22 @@ let chordActor (id: int) (keyList: int list) = spawn system (string id) <| fun m
                 if (sendRequests) 
                 then
                     system.Scheduler.Advanced.ScheduleRepeatedly (TimeSpan.FromMilliseconds(0.0), TimeSpan.FromMilliseconds(1000.0), fun () -> 
-                        if sentRequests < numOfRequests
+                        if !sentRequests < numOfRequests
                         then
                             // find it in the finger table
-                            let nextNodeIndex = getNodeFromFingerTable id keyId 
-                            sentRequests <- sentRequests + 1
-                            actorList.[nextNodeIndex] <! Successor(originalID, keyId, newHops)
+                            incr sentRequests
+                            let randomKeyIndex = random.Next(keys.Length-1)
+                            let nextNodeIndex = getNodeFromFingerTable id keys.[randomKeyIndex] 
+                            //printf "\n req: %d" !sentRequests
+                            actorList.[nextNodeIndex] <! Successor(id, keys.[randomKeyIndex], 0)
                             // else mailbox.Context.System.Terminate() |> ignore // stop the actor after it makes a certain amount of requests
                     ) 
 
 
         // handle an incoming message
-        return! loop() // store the new s,w into the next state of the actor
+        return! loop(sentRequests) // store the new s,w into the next state of the actor
     }
-    loop()  
+    loop(ref 0)  
 
 let createActors() = 
     // We are going to create an actor using the mappings we just made
@@ -271,10 +288,11 @@ let createActors() =
 // will start process of searching for keys
 let findKey () = 
     let sortedNodes = List.sort nodes
-    let randomKey = random.Next(keys.Length-1)
-    let randomNode = random.Next(actorList.Length-1)
-    printf "finding key %i \n" keys.[randomKey]
-    actorList.[0] <! Successor(sortedNodes.[1], keys.[randomKey], 0) 
+    let randomKeyIndex = random.Next(keys.Length-1)
+    let randomNode = random.Next(sortedNodes.Length-1)
+    printf "finding key %i starting from %i \n" keys.[randomKeyIndex] sortedNodes.[randomNode]
+    let nextNodeIndex = getNodeFromFingerTable sortedNodes.[randomNode] keys.[randomKeyIndex] 
+    actorList.[nextNodeIndex] <! Successor(sortedNodes.[randomNode], keys.[randomKeyIndex], 0) 
 
 
 
@@ -283,7 +301,8 @@ let main argv =
     numOfNodes <- (int argv.[0])
     numOfRequests <- (int argv.[1])
     generateNodes() |> ignore
-    printfn "Nodes: %A" nodes
+    let sortedNodes = List.sort nodes
+    printfn "Nodes: %A" sortedNodes
     generateKeys() |> ignore
     printfn "Keys: %A" keys
 
