@@ -12,6 +12,7 @@ open Akka.Actor
 let system = ActorSystem.Create("FSharp")
 
 type Message =
+    | Update of int list
     | Successor of int * int * int // key * hopsCount
 
 let mutable numOfNodes = 0
@@ -145,17 +146,30 @@ let getNodeFromFingerTable (currentNodeId:int) (keyId:int) =
         then nextNodeIndex <- nodeIndex
     nextNodeIndex
 
+let delete id (keyList : int list) =
+    let sortedNodes = List.sort nodes 
+    let mutable index = 0
+    for node in sortedNodes do 
+        if id = node then 
+            actorList.[0] <! Update keyList
+        else 
+            index <- index + 1
+    // kill mailbox after.
+
 let chordActor (id: int) (keyList: int list) = spawn system (string id) <| fun mailbox ->
     // printfn "Created actor with id: %s." id 
     // printfn "My keys are: %A" keyList
     // printfn "My successor is located at %i, and is %i" (fst(successor)) (snd(successor))
     // printfn "==================="
     let mutable sentRequests = 0
+    let mutable integratedKeyList = keyList
     let rec loop() = actor {
         let! msg = mailbox.Receive() 
         let sender = mailbox.Sender()
 
         match msg with
+            | Update(newKeysToAdd) ->
+                integratedKeyList <- List.append integratedKeyList newKeysToAdd
             | Successor(originalID, keyId,hops) -> 
                 let keyHash = SHA1(keyId |> string) // should we be comparing key hash or the key id? adding this for now
                 let newHops = hops+1 // keep track of how many hops it takes to find key by itterating by 1
@@ -175,7 +189,7 @@ let chordActor (id: int) (keyList: int list) = spawn system (string id) <| fun m
                     let mutable keyFound = false
                     // printfn "Node: %s. KeyList Length: %d" (string (fst(id))) keyList.Length
                     // REMINDER: KeyList only has keys that the node has so we can justcompare our keyHash to every hash in keyList
-                    for key in keyList do // check if current node contains key we are looking for
+                    for key in integratedKeyList do // check if current node contains key we are looking for
                         if keyHash = SHA1(key |> string)
                         then 
                             keyFound <- true
