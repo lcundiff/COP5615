@@ -169,12 +169,12 @@ let getNodeFromFingerTable (currentNodeId:int) (keyId:int) =
         // if the finger table node is less than key AND it is greater than current node (UNLESS the key is also less than current node)
         if nodeId < keyId && (nodeId > currentNodeId || keyId < currentNodeId) && nextNodeIndex = -1 // 0 indicates node hasnt been found
         then 
-            printf "\n next node: %i key id %i current node: %i" nodeFingerTable.[i] keyId currentNodeId
+            //printf "\n next node: %i key id %i current node: %i" nodeFingerTable.[i] keyId currentNodeId
             nextNodeIndex <- nodeIndex // this node is largest nodeid in finger table that is less than the key            
 
     if nextNodeIndex = -1 // if looped through finger table but no node was less than key
     then 
-        printf "\n No node matched. next node: %i keyId: %i current node: %i" sortedNodes.[nodeFingerTable.[nodeFingerTable.Length-1]] keyId currentNodeId
+        //printf "\n No node matched. next node: %i keyId: %i current node: %i" sortedNodes.[nodeFingerTable.[nodeFingerTable.Length-1]] keyId currentNodeId
         nextNodeIndex <- nodeFingerTable.[nodeFingerTable.Length-1]
     nextNodeIndex
 
