@@ -122,39 +122,47 @@ let fingerTableInit (nodeId:int) =
     let mutable fingerTable = []
     let sortedNodes = List.sort nodes // [a list of hashes]
     let mutable closestNodeIndex = 0 
-    for i in 0..int(m) do
-        let fingerEntry = int( float(nodeId) + (2.0**float(i) - 1.0))
-        let hashedRowId = SHA1(fingerEntry |> string)
-        if sortedNodes.[closestNodeIndex] < fingerEntry
-        then 
-            while closestNodeIndex < sortedNodes.Length && sortedNodes.[closestNodeIndex] < fingerEntry do
-                closestNodeIndex <- closestNodeIndex + 1
-            if closestNodeIndex = sortedNodes.Length 
-            then closestNodeIndex <- 0
-
-        fingerTable <- List.append fingerTable [[fingerEntry;closestNodeIndex]] // it would be easier if we used number ids insead of hashes
+    for i in 1..int(m) do
+        if closestNodeIndex < sortedNodes.Length
+        then
+            let finger = int(( float(nodeId) + (2.0**float(i-1)) ) % (2.0**m)) 
+            let hashedRowId = SHA1(finger |> string)
+            if sortedNodes.[closestNodeIndex] < finger
+            then 
+                while closestNodeIndex < sortedNodes.Length && sortedNodes.[closestNodeIndex] < finger do
+                    closestNodeIndex <- closestNodeIndex + 1
+                //if closestNodeIndex = sortedNodes.Length 
+                //then closestNodeIndex <- 0
+            if closestNodeIndex > 0 && closestNodeIndex < sortedNodes.Length
+            //then fingerTable <- List.append fingerTable [[fingerEntry;closestNodeIndex]] // it would be easier if we used number ids insead of hashes
+            then fingerTable <- List.append fingerTable [closestNodeIndex] 
     fingerTable
 
 let getNodeFromFingerTable (currentNodeId:int) (keyId:int) = 
     let nodeFingerTable = fingerTableInit(currentNodeId)
     let sortedNodes = List.sort nodes
-    // let (fingerRow:string list) = fingerTable.[fingerIndex] // (finger index ; node index)
     let mutable nextNodeIndex = 0
-    for f in nodeFingerTable do
-        if nextNodeIndex = 0
-        then
-            let nodeIndex = f.[1] // ([0] -> 0..2^i - 1 ; [1] -> closest node index)
-            let nodeId = sortedNodes.[nodeIndex]
-            if nodeId > keyId && nodeIndex = 0
+    let mutable fingerRowCount = 0
+    //printfn "Mappings: %A" mappings
+    //printf " finger table %A nodeid: %i" nodeFingerTable currentNodeId
+    for nodeIndex in nodeFingerTable do
+        let nodeId = sortedNodes.[nodeIndex]
+        if nodeId > keyId && nextNodeIndex = 0 // 0 indicates node hasnt been found
+        then 
+            //printf "nodeIndex: %i 1st index %i" nodeIndex nodeFingerTable.[0].[1]
+            if fingerRowCount = 0 // 1st row of finger table successor
             then 
-                printf "this shouldn't happen bc key %i should be at this node %i" keyId nodeId
-                printfn "Mappings: %A" mappings
+                //printf "next node (successor): %i key id %i" nodeId keyId
+                nextNodeIndex <- nodeIndex
             else
-                //printf "next node: %i" nodeId
-                if nodeId > keyId
-                then 
-                    printf "next node: %i" nodeId
-                    nextNodeIndex <- nodeIndex - 1 // overshot the keyid, so we got to previous node and check that finger table (unless key is there)
+                //printf "next node: %i key id %i" nodeId keyId
+                nextNodeIndex <- nodeFingerTable.[fingerRowCount-1] // overshot the keyid, so we got to previous node and check that finger table (unless key is there)
+        elif fingerRowCount = nodeFingerTable.Length - 1 && nextNodeIndex = 0 // if at end of finger table, route to here
+        then 
+            //printf "End of finger table. NodeId: %i keyId: %i" nodeId keyId
+            nextNodeIndex <- nodeIndex              
+        fingerRowCount <- fingerRowCount + 1
+
     nextNodeIndex
 
 let delete id (keyList : int list) =
@@ -198,28 +206,26 @@ let chordActor (id: int) (keyList: int list) = spawn system (string id) <| fun m
                 // Else, we need to check if the currentNode contains our key.
                 else 
                     let mutable keyFound = false
-                    //printfn "Key: %A" keyList
+                    //printfn " Key List: %A" keyList
                     //printf " keyBeingSearchedFor %i" keyId
                     //printfn "Mappings: %A" mappings
-                    // REMINDER: KeyList only has keys that the node has so we can justcompare our keyHash to every hash in keyList
+
+                    // REMINDER: KeyList only has keys that the node has so we can just compare our keyHash to every hash in keyList
                     for key in keyList do // check if current node contains key we are looking for
                         let keyBeingSearchedFor = SHA1(key |> string)
-                        //printf " key1 %s key2 %s" keyHash keyBeingSearchedFor
-                        //if keyHash = SHA1(key |> string)
-                        if key = keyId
+                        if keyBeingSearchedFor = keyHash
                         then 
                             keyFound <- true
                     if keyFound
                     then 
                         lock _lock (fun () -> 
                             hopsList <- List.append hopsList [newHops]
-                            printfn "key found after %d hops" newHops // not sure what to do here?
+                            printfn "key found after %d hops" newHops 
                             checkIfFinished()
                         )
                         // send request every second
                     else 
-                        let nodeId = id
-                        let nextNodeIndex = getNodeFromFingerTable nodeId keyId 
+                        let nextNodeIndex = getNodeFromFingerTable id keyId 
                         //printfn "Next Node Index: %d" nextNodeIndex
                         actorList.[nextNodeIndex] <! Successor(originalID, keyId, newHops)
                 if (sendRequests) 
@@ -228,11 +234,9 @@ let chordActor (id: int) (keyList: int list) = spawn system (string id) <| fun m
                         if sentRequests < numOfRequests
                         then
                             // find it in the finger table
-                            // here too.
-                            let nodeId = id // this wont work because id needs to be a number, not a hash
-                            //let nextNodeIndex = getNodeFromFingerTable nodeId keyId 
+                            let nextNodeIndex = getNodeFromFingerTable id keyId 
                             sentRequests <- sentRequests + 1
-                            //actorList.[nextNodeIndex] <! Successor(originalID, keyId, newHops)
+                            actorList.[nextNodeIndex] <! Successor(originalID, keyId, newHops)
                             // else mailbox.Context.System.Terminate() |> ignore // stop the actor after it makes a certain amount of requests
                     ) 
 
@@ -269,7 +273,7 @@ let findKey () =
     let sortedNodes = List.sort nodes
     let randomKey = random.Next(keys.Length-1)
     let randomNode = random.Next(actorList.Length-1)
-    printf "finding key %i" keys.[randomKey]
+    printf "finding key %i \n" keys.[randomKey]
     actorList.[0] <! Successor(sortedNodes.[1], keys.[randomKey], 0) 
 
 
