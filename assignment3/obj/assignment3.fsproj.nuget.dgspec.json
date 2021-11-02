@@ -1,30 +1,25 @@
 {
   "format": 1,
   "restore": {
-    "E:\\COP5615Github\\COP5615\\assignment3\\assignment3.fsproj": {}
+    "/home/logancundiff/Documents/GitHub/COP5615/assignment3/assignment3.fsproj": {}
   },
   "projects": {
-    "E:\\COP5615Github\\COP5615\\assignment3\\assignment3.fsproj": {
+    "/home/logancundiff/Documents/GitHub/COP5615/assignment3/assignment3.fsproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "E:\\COP5615Github\\COP5615\\assignment3\\assignment3.fsproj",
+        "projectUniqueName": "/home/logancundiff/Documents/GitHub/COP5615/assignment3/assignment3.fsproj",
         "projectName": "assignment3",
-        "projectPath": "E:\\COP5615Github\\COP5615\\assignment3\\assignment3.fsproj",
-        "packagesPath": "C:\\Users\\Chris\\.nuget\\packages\\",
-        "outputPath": "E:\\COP5615Github\\COP5615\\assignment3\\obj\\",
+        "projectPath": "/home/logancundiff/Documents/GitHub/COP5615/assignment3/assignment3.fsproj",
+        "packagesPath": "/home/logancundiff/.nuget/packages/",
+        "outputPath": "/home/logancundiff/Documents/GitHub/COP5615/assignment3/obj/",
         "projectStyle": "PackageReference",
-        "fallbackFolders": [
-          "C:\\Program Files\\dotnet\\sdk\\NuGetFallbackFolder"
-        ],
         "configFilePaths": [
-          "C:\\Users\\Chris\\AppData\\Roaming\\NuGet\\NuGet.Config",
-          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
+          "/home/logancundiff/.nuget/NuGet/NuGet.Config"
         ],
         "originalTargetFrameworks": [
           "net5.0"
         ],
         "sources": {
-          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
           "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
@@ -65,7 +60,7 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\5.0.402\\RuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "/usr/share/dotnet/sdk/5.0.402/RuntimeIdentifierGraph.json"
         }
       }
     }

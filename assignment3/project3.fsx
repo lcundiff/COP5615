@@ -118,12 +118,12 @@ let checkIfFinished() =
             sum <- sum + num 
         
         let average = float sum / (float hopsList.Length)
-        printfn "Total Hops: %d\nAverage hops per requests: %f" hopsList.Length average
+        printfn "\nTotal Hops: %d\nAverage hops per requests: %f" hopsList.Length average
         Environment.Exit 0
     
-let fingerTableInit (nodeId:int) = 
+let fingerTableInit (nodeId:int) (sortedNodes:int list) = 
     let mutable fingerTable = []
-    let sortedNodes = List.sort nodes // [a list of hashes]
+    //let sortedNodes = List.sort nodes // [a list of hashes]
     let mutable closestNodeIndex = 0 
     for i in 1..int(m) do
         if closestNodeIndex < sortedNodes.Length
@@ -143,15 +143,17 @@ let fingerTableInit (nodeId:int) =
     fingerTable
 
 let getNodeFromFingerTable (currentNodeId:int) (keyId:int) = 
-    //printfn "Mappings: %A" mappings
-    let nodeFingerTable = fingerTableInit(currentNodeId)
-    // printf "\nfinger table %A nodeid: %i" nodeFingerTable currentNodeId
-
     let sortedNodes = List.sort nodes
+    //printfn "\nMappings: %A \n nodes: %A \n key: %i" mappings sortedNodes keyId
+    let nodeFingerTable = fingerTableInit currentNodeId sortedNodes
+    //printf "\nfinger table %A" nodeFingerTable 
+    //printf "\nnodeid: %i" currentNodeId
     let mutable nextNodeIndex = -1
     // psuedocode from paper: "if (id E (n, id)] return successor;"
     let successorIndex = nodeFingerTable.[0] // 1st row of finger table is the successor
-    let successorId = sortedNodes.[successorIndex]
+    let mutable successorId = currentNodeId
+    if successorIndex < sortedNodes.Length // handle case where finger lookup happened before node was deleted
+    then successorId <- sortedNodes.[successorIndex]
     // IF key is between node and successor 
     // 1st edge case: IF key is above the highest nodeid
     // 2nd edge case: IF key is below the lowest nodeid
@@ -169,11 +171,11 @@ let getNodeFromFingerTable (currentNodeId:int) (keyId:int) =
         let nodeIndex = nodeFingerTable.[i]
         let nodeId = sortedNodes.[nodeIndex]
         // need to calculate if finger is "in between" node and id: 
-        let keyIsInFront = keyId > currentNodeId 
+        let keyIsBehind = keyId < currentNodeId 
         let fingerIsInFront = nodeId > currentNodeId
-        // if the finger table node is less than key AND it is greater than current node (UNLESS the key is also less than current node)
+        // if the finger table node is less than key AND it is greater than current node (UNLESS the key is also behind current node)
         //printf "\n next node: %i key id %i current node: %i bool: %b" nodeId keyId currentNodeId (nodeId < keyId && (not keyIsInFront || fingerIsInFront) && nextNodeIndex = -1 )
-        if nodeId < keyId && (fingerIsInFront || not keyIsInFront) && nextNodeIndex = -1 // -1 indicates node hasnt been found
+        if nodeId < keyId && (fingerIsInFront || keyIsBehind) && nextNodeIndex = -1 // -1 indicates node hasnt been found
         then 
             //printf "\n node picked: %i key id %i current node: %i" nodeId keyId currentNodeId
             nextNodeIndex <- nodeIndex // this node is largest nodeid in finger table that is less than the key            
@@ -192,14 +194,20 @@ let delete id (keyList : int list) =
     let mutable index = 0
     let mutable found = false
     for node in sortedNodes do 
-        if (index + 1 >= sortedNodes.Length - 1 && not found) then 
-            found <- true
-            nodes <- removeAt index nodes
+        if (index = sortedNodes.Length-1 && not found) then 
+            for n in 0..nodes.Length-1 do 
+                if not found && nodes.[n] = id
+                then 
+                    nodes <- removeAt n nodes
+                    found <- true
             actorList <- removeAt index actorList
             actorList.[0] <! Update keyList     
         else if (id = node &&  not found) then 
-            found <- true
-            nodes <- removeAt index nodes
+            for n in 0..nodes.Length-1 do 
+                if not found && nodes.[n] = id
+                then 
+                    nodes <- removeAt n nodes
+                    found <- true
             actorList <- removeAt index actorList
             actorList.[index] <! Update keyList
         else 
@@ -224,6 +232,9 @@ let chordActor (id: int) (keyList: int list) = spawn system (string id) <| fun m
             | Update(newKeysToAdd) ->
                 printfn "Node %i, received Keys: %A" id newKeysToAdd
                 integratedKeyList <- List.append integratedKeyList newKeysToAdd
+                let sortedNodes = List.sort nodes
+                printf "\nnode/actor sync check nodes: %A" sortedNodes 
+                 
             | Successor(originalID, keyId,hops) -> 
                 let keyHash = SHA1(keyId |> string) // should we be comparing key hash or the key id? adding this for now
                 let newHops = hops+1 // keep track of how many hops it takes to find key by itterating by 1
@@ -233,7 +244,7 @@ let chordActor (id: int) (keyList: int list) = spawn system (string id) <| fun m
                 // Then we can assume the id doesn't exist 
                 if (originalHash = idHash) // 
                 then
-                    // printf "at original node"
+                    printf "at original node"
                     lock _lock (fun () -> 
                         hopsList <- List.append hopsList [newHops]
                         // printfn "Key not found after %d hops" newHops
@@ -262,7 +273,7 @@ let chordActor (id: int) (keyList: int list) = spawn system (string id) <| fun m
                         // send request every second
                     else 
                         let nextNodeIndex = getNodeFromFingerTable id keyId 
-                        // printfn "Next Node Index: %d" nextNodeIndex
+                        //printfn "Next Node Index: %d" nextNodeIndex
                         try 
                             actorList.[nextNodeIndex] <! Successor(originalID, keyId, newHops)
                         with 
