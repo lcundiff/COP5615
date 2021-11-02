@@ -16,6 +16,7 @@ type Message =
     | Successor of int * int * int // key * hopsCount
 
 let mutable numOfNodes = 0
+let mutable DOTHIS = true
 // list of keys in SHA1 form
 // Nodes = [NodeIDs in int form] [42;84..]
 // Keys = [KeyID in int form] 
@@ -28,6 +29,7 @@ let m = 13.0
 let mutable numOfRequests = 0 // init inputted value
 let mutable sendRequests = false
 let mutable (hopsList:int list) = []
+let mutable someKey = 0
 let _lock = Object()
 let random = Random() 
 let maxEntries = 2.0**m - 1.0
@@ -109,7 +111,7 @@ let getRandomKey(keyList) =
 
 let checkIfFinished() =
     //printf "\ntotal requests: %i" hopsList.Length
-    if (hopsList.Length >= (numOfNodes * numOfRequests))
+    if (hopsList.Length >= (numOfNodes * numOfRequests) - 5)
     then 
         let mutable sum = 0
         for num in hopsList do
@@ -182,12 +184,24 @@ let getNodeFromFingerTable (currentNodeId:int) (keyId:int) =
         nextNodeIndex <- nodeFingerTable.[nodeFingerTable.Length-1]
     nextNodeIndex
 
+let removeAt index list =
+    list |> List.indexed |> List.filter (fun (i, _) -> i <> index) |> List.map snd
+
 let delete id (keyList : int list) =
     let sortedNodes = List.sort nodes 
     let mutable index = 0
+    let mutable found = false
     for node in sortedNodes do 
-        if id = node then 
-            actorList.[0] <! Update keyList
+        if (index + 1 >= sortedNodes.Length - 1 && not found) then 
+            found <- true
+            nodes <- removeAt index nodes
+            actorList <- removeAt index actorList
+            actorList.[0] <! Update keyList     
+        else if (id = node &&  not found) then 
+            found <- true
+            nodes <- removeAt index nodes
+            actorList <- removeAt index actorList
+            actorList.[index] <! Update keyList
         else 
             index <- index + 1
     // kill mailbox after.
@@ -199,13 +213,16 @@ let chordActor (id: int) (keyList: int list) = spawn system (string id) <| fun m
     // printfn "==================="
     //let mutable sentRequests = 0
     let mutable integratedKeyList = keyList
+    let mutable notFinished = true
     let rec loop(sentRequests) = actor {
         let! msg = mailbox.Receive() 
         let sender = mailbox.Sender()
+        // printfn "HERE UNDER SENDER"
         //let mutable req = sentRequests
         //printf "message recieved"
         match msg with
             | Update(newKeysToAdd) ->
+                printfn "Node %i, received Keys: %A" id newKeysToAdd
                 integratedKeyList <- List.append integratedKeyList newKeysToAdd
             | Successor(originalID, keyId,hops) -> 
                 let keyHash = SHA1(keyId |> string) // should we be comparing key hash or the key id? adding this for now
@@ -224,13 +241,14 @@ let chordActor (id: int) (keyList: int list) = spawn system (string id) <| fun m
                     )
                 // Else, we need to check if the currentNode contains our key.
                 else 
+                    // printfn "HERE"
                     let mutable keyFound = false
                     //printfn " Key List: %A" keyList
                     //printf " keyBeingSearchedFor %i" keyId
                     //printfn "Mappings: %A" mappings
 
                     // REMINDER: KeyList only has keys that the node has so we can just compare our keyHash to every hash in keyList
-                    for key in keyList do // check if current node contains key we are looking for
+                    for key in integratedKeyList do // check if current node contains key we are looking for
                         let keyBeingSearchedFor = SHA1(key |> string)
                         if keyBeingSearchedFor = keyHash
                         then 
@@ -239,26 +257,60 @@ let chordActor (id: int) (keyList: int list) = spawn system (string id) <| fun m
                     then 
                         lock _lock (fun () -> 
                             hopsList <- List.append hopsList [newHops]
-                            // printfn "key found after %d hops" newHops 
                             checkIfFinished()
                         )
                         // send request every second
                     else 
                         let nextNodeIndex = getNodeFromFingerTable id keyId 
-                        //printfn "Next Node Index: %d" nextNodeIndex
-                        actorList.[nextNodeIndex] <! Successor(originalID, keyId, newHops)
+                        // printfn "Next Node Index: %d" nextNodeIndex
+                        try 
+                            actorList.[nextNodeIndex] <! Successor(originalID, keyId, newHops)
+                        with 
+                            | _ -> 
+                                let nextNodeIndex = getNodeFromFingerTable id keyId 
+                                actorList.[nextNodeIndex] <! Successor(originalID, keyId, newHops)
                 if (sendRequests) 
                 then
                     system.Scheduler.Advanced.ScheduleRepeatedly (TimeSpan.FromMilliseconds(0.0), TimeSpan.FromMilliseconds(1000.0), fun () -> 
                         if !sentRequests < numOfRequests
                         then
+                            if (!sentRequests >= 5 && DOTHIS) then
+                                if integratedKeyList.Length > 0 then
+                                    DOTHIS <- false
+                                    printfn "deleting: Node %i, with keys: %A. " id integratedKeyList
+                                    delete id integratedKeyList
+                                    mailbox.Self.Tell(PoisonPill.Instance)
+                                    //mailbox.Context.System.Terminate() |> ignore
                             // find it in the finger table
                             incr sentRequests
+                            // Don't allow KEYS that Exist
+                            
                             let randomKeyIndex = random.Next(keys.Length-1)
-                            let nextNodeIndex = getNodeFromFingerTable id keys.[randomKeyIndex] 
+                            let mutable randomKey = keys.[randomKeyIndex]
+                            while (List.contains randomKey integratedKeyList) do 
+                                // printfn "We already had key %i in our keyList %A" randomKey integratedKeyList
+                                let randomKeyIndex2 = random.Next(keys.Length - 1)
+                                randomKey <- keys.[randomKeyIndex2]
+                            let nextNodeIndex = getNodeFromFingerTable id randomKey
                             //printf "\n req: %d" !sentRequests
-                            actorList.[nextNodeIndex] <! Successor(id, keys.[randomKeyIndex], 0)
+                            
+                            // printfn "Node %d sending request to Node %d for Key %d " id sortedNodes.[nextNodeIndex] someKey
+                            try 
+                                actorList.[nextNodeIndex] <! Successor(id, randomKey, 0)
+                            with 
+                                | _ -> 
+                                    let nextNodeIndex = getNodeFromFingerTable id randomKey
+                                    actorList.[nextNodeIndex] <! Successor(id, randomKey, 0)
+                            
                             // else mailbox.Context.System.Terminate() |> ignore // stop the actor after it makes a certain amount of requests
+                        else
+                            // for testing purposes
+                            if(notFinished) then
+                                
+                                // printfn "Node %d: %A, Sent our %i request" id integratedKeyList !sentRequests
+
+                                notFinished <- false
+
                     ) 
         // handle an incoming message
         return! loop(sentRequests) // store the new s,w into the next state of the actor
@@ -296,6 +348,14 @@ let findKey () =
     let nextNodeIndex = getNodeFromFingerTable sortedNodes.[randomNode] keys.[randomKeyIndex]
     actorList.[nextNodeIndex] <! Successor(sortedNodes.[randomNode], keys.[randomKeyIndex], 0) 
 
+let startAllActors () = 
+    for actor in actorList do
+        let sortedNodes = List.sort nodes
+        let randomKeyIndex = random.Next(keys.Length-1)
+        let randomNode = random.Next(sortedNodes.Length-1)
+        let nextNodeIndex = getNodeFromFingerTable sortedNodes.[randomNode] keys.[randomKeyIndex] 
+
+        actor <! Successor(sortedNodes.[nextNodeIndex], keys.[randomKeyIndex], 0)
 
 
 [<EntryPoint>]
@@ -312,16 +372,18 @@ let main argv =
     printfn "Mappings: %A" mappings
     createActors() |> ignore
     printfn "Finished making actors."
-    findKey() |> ignore
     sendRequests <- true
-
+(*
     // test cases
     //printf "node: %i key: %i" sortedNodes.[sortedNodes.Length-1] mappings.[0].[1]
     let testNodeIndex = getNodeFromFingerTable sortedNodes.[sortedNodes.Length-1] mappings.[0].[1]
     if sortedNodes.[testNodeIndex] <= mappings.[0].[0]
     then printf "\nedge case passed"
     else printf "\nedge case test failed"
-    
+   *) 
+    let randomKeyIndex = random.Next(keys.Length-1)
+    someKey <- keys.[randomKeyIndex]
+    startAllActors()
     // The KeyValue Mappings are in nodeMappings [|55; 24; 28|] [|9;5|].. to access 55 you would do nodeMappings.[0].[0]
     System.Console.ReadLine() |> ignore
     0 // return an integer exit code
