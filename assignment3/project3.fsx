@@ -143,7 +143,7 @@ let fingerTableInit (nodeId:int) =
 let getNodeFromFingerTable (currentNodeId:int) (keyId:int) = 
     //printfn "Mappings: %A" mappings
     let nodeFingerTable = fingerTableInit(currentNodeId)
-    printf "\nfinger table %A nodeid: %i" nodeFingerTable currentNodeId
+    // printf "\nfinger table %A nodeid: %i" nodeFingerTable currentNodeId
 
     let sortedNodes = List.sort nodes
     let mutable nextNodeIndex = -1
@@ -216,7 +216,7 @@ let chordActor (id: int) (keyList: int list) = spawn system (string id) <| fun m
                 // Then we can assume the id doesn't exist 
                 if (originalHash = idHash) // 
                 then
-                    printf "at original node"
+                    // printf "at original node"
                     lock _lock (fun () -> 
                         hopsList <- List.append hopsList [newHops]
                         // printfn "Key not found after %d hops" newHops
@@ -239,7 +239,7 @@ let chordActor (id: int) (keyList: int list) = spawn system (string id) <| fun m
                     then 
                         lock _lock (fun () -> 
                             hopsList <- List.append hopsList [newHops]
-                            printfn "key found after %d hops" newHops 
+                            // printfn "key found after %d hops" newHops 
                             checkIfFinished()
                         )
                         // send request every second
