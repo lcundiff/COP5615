@@ -112,7 +112,8 @@ let getRandomKey(keyList) =
 
 let checkIfFinished() =
     //printf "\ntotal requests: %i" hopsList.Length
-    if (hopsList.Length >= (numOfNodes * numOfRequests) - 5)
+    // 
+    if (hopsList.Length >= (numOfNodes * numOfRequests) - (numOfRequests - 5))
     then 
         let mutable sum = 0
         for num in hopsList do
@@ -246,19 +247,24 @@ let chordActor (id: int) (keyList: int list) = spawn system (string id) <| fun m
                             )
                         incr sentRequests
                         // Don't allow KEYS that Exist
-                        
-                        let randomKeyIndex = random.Next(keys.Length-1)
+                        // [node1; key1; key2] [node2; key3; key4]
+                        // [node1; key1; key2 ... keyn]
+                        let randomKeyIndex = random.Next(keys.Length)
                         let mutable randomKey = keys.[randomKeyIndex]
-                        while (List.contains randomKey integratedKeyList && mappings.Length > 1) do 
+                        while (List.contains randomKey integratedKeyList && not (integratedKeyList.Length = keys.Length)) do 
                             // printfn "We already had key %i in our keyList %A" randomKey integratedKeyList
-                            let randomKeyIndex2 = random.Next(keys.Length - 1)
+                            // printfn "Mappings: %A" mappings
+                            let randomKeyIndex2 = random.Next(keys.Length)
+                            // printfn "randomKeyIndex2: %i" randomKeyIndex2
+                            // printfn "Integrated Key List: %A" integratedKeyList
                             randomKey <- keys.[randomKeyIndex2]
                         let nextNodeIndex = getNodeFromFingerTable id randomKey
                         //printf "\n req: %d" !sentRequests
                         
                         // printfn "Node %d sending request to Node %d for Key %d " id sortedNodes.[nextNodeIndex] someKey
                         try 
-                            // printfn "Attempting to send to %i, from %i" nextNodeIndex id
+                            let sortedNodes = List.sort nodes
+                            // printfn "Attempting to find key %i at %i, sending from %i" randomKey sortedNodes.[nextNodeIndex] id
                             actorList.[nextNodeIndex] <! Successor(id, randomKey, 0)
                         with 
                             | _ -> 
@@ -292,7 +298,7 @@ let chordActor (id: int) (keyList: int list) = spawn system (string id) <| fun m
                 // printfn "my Id %i" id
                 if (originalHash = idHash) // 
                 then
-                    printfn "at original node"
+                    // printfn "at original node"
                     lock _lock (fun () -> 
                         hopsList <- List.append hopsList [newHops]
                         // printfn "Key not found after %d hops" newHops
@@ -308,6 +314,7 @@ let chordActor (id: int) (keyList: int list) = spawn system (string id) <| fun m
 
                     // REMINDER: KeyList only has keys that the node has so we can just compare our keyHash to every hash in keyList
                     for key in integratedKeyList do // check if current node contains key we are looking for
+                        // printfn "Found the Key."
                         let keyBeingSearchedFor = SHA1(key |> string)
                         if keyBeingSearchedFor = keyHash
                         then 
@@ -351,18 +358,6 @@ let createActors() =
         index <- index + 1
         // Threading.Thread.Sleep(500)
     0    
-
-
-
-// [55; 54; 28]
-// will start process of searching for keys
-let findKey () = 
-    let sortedNodes = List.sort nodes
-    let randomKeyIndex = random.Next(keys.Length-1)
-    let randomNode = random.Next(sortedNodes.Length-1)
-    printf "finding key %i starting from %i \n" keys.[randomKeyIndex] sortedNodes.[randomNode]
-    let nextNodeIndex = getNodeFromFingerTable sortedNodes.[randomNode] keys.[randomKeyIndex]
-    actorList.[nextNodeIndex] <! Successor(sortedNodes.[randomNode], keys.[randomKeyIndex], 0) 
 
 let startAllActors () =
     for actor in actorList do
