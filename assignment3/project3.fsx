@@ -92,24 +92,6 @@ let findClosestNode ()=
         let nodeForKey = identify key sortedNodes 0 // 65
         map key nodeForKey 0
     
-    
-// keyList is used to make sure we aren't checking for a key that we already have
-let getRandomKey(keyList) = 
-    let mutable key = -1
-    let mutable check = true 
-    while check do 
-        key <- keys.[random.Next((keys.Length))]
-        let mutable keyFound = false
-        // keyList has a id and a key hash
-        for hash in keyList do // check if current node contains key we are looking for
-            if hash = key
-            then 
-                keyFound <- true
-            // printfn "Added new one %d" nodeId
-        if not keyFound
-        then check <- false
-    key
-
 // [3 8]
 let checkIfFinished() =
     //printf "\ntotal requests: %i" hopsList.Length
@@ -123,10 +105,10 @@ let checkIfFinished() =
             sum <- sum + num 
         
         let average = float sum / (float hopsList.Length)
-        printfn "\nTotal Hops: %d\nAverage hops per requests: %f" hopsList.Length average
+        printfn "\nFinished with fewer hops due to node death. \nTotal Hops: %d\nAverage hops per requests: %f" hopsList.Length average
         Environment.Exit 0
     
-let fingerTableInit (nodeId:int) (sortedNodes:int list) = 
+let fix_fingers (nodeId:int) (sortedNodes:int list) = 
     let mutable fingerTable = []
     //let sortedNodes = List.sort nodes // [a list of hashes]
     let mutable closestNodeIndex = 0 
@@ -150,7 +132,7 @@ let fingerTableInit (nodeId:int) (sortedNodes:int list) =
 let getNodeFromFingerTable (currentNodeId:int) (keyId:int) = 
     let sortedNodes = List.sort nodes
     //printfn "\nMappings: %A \n nodes: %A \n key: %i" mappings sortedNodes keyId
-    let nodeFingerTable = fingerTableInit currentNodeId sortedNodes
+    let nodeFingerTable = fix_fingers currentNodeId sortedNodes
     //printf "\nfinger table %A" nodeFingerTable 
     //printf "\nnodeid: %i" currentNodeId
     let mutable nextNodeIndex = -1
@@ -242,7 +224,7 @@ let chordActor (id: int) (keyList: int list) = spawn system (string id) <| fun m
                             if (!sentRequests >= 5 && DOTHIS) then
                                 if integratedKeyList.Length > 0 then
                                     DOTHIS <- false
-                                    printfn "deleting: Node %i, with keys: %A. " id integratedKeyList
+                                    printfn "Node death: Node %i, with keys: %A. " id integratedKeyList
                                     delete id integratedKeyList
                                     mailbox.Self.Tell(PoisonPill.Instance)
                                     //mailbox.Context.System.Terminate() |> ignore
@@ -343,7 +325,13 @@ let chordActor (id: int) (keyList: int list) = spawn system (string id) <| fun m
     }
     loop(ref 0)  
 
-let createActors() = 
+let startAllActors () =
+    for actor in actorList do
+        actor <! Start("Start")
+        // actorList.[nextNodeIndex] <! Successor(id, randomKey, 0)
+
+
+let joinAndStabilize() = 
     // We are going to create an actor using the mappings we just made
     // If an actor has no mappings, we need to make that evident
     let sortedNodes = List.sort nodes
@@ -360,12 +348,11 @@ let createActors() =
         else actorList <- List.append actorList [chordActor node keyList] 
         index <- index + 1
         // Threading.Thread.Sleep(500)
+    sendRequests <- true
+    startAllActors()
+
     0    
 
-let startAllActors () =
-    for actor in actorList do
-        actor <! Start("Start")
-        // actorList.[nextNodeIndex] <! Successor(id, randomKey, 0)
 
 
 
@@ -375,15 +362,14 @@ let main argv =
     numOfRequests <- (int argv.[1])
     generateNodes() |> ignore
     let sortedNodes = List.sort nodes
-    printfn "Nodes: %A" sortedNodes
+    // printfn "Nodes: %A" sortedNodes
     generateKeys() |> ignore
-    printfn "Keys: %A" keys
+    // printfn "Keys: %A" keys
 
     findClosestNode() |> ignore
-    printfn "Mappings: %A" mappings
-    createActors() |> ignore
-    printfn "Finished making actors."
-    sendRequests <- true
+    // printfn "Mappings: %A" mappings
+    joinAndStabilize() |> ignore
+    // printfn "Finished making actors."
 (*
     // test cases
     //printf "node: %i key: %i" sortedNodes.[sortedNodes.Length-1] mappings.[0].[1]
@@ -392,9 +378,6 @@ let main argv =
     then printf "\nedge case passed"
     else printf "\nedge case test failed"
    *) 
-    let randomKeyIndex = random.Next(keys.Length-1)
-    someKey <- keys.[randomKeyIndex]
-    startAllActors()
     // The KeyValue Mappings are in nodeMappings [|55; 24; 28|] [|9;5|].. to access 55 you would do nodeMappings.[0].[0]
     System.Console.ReadLine() |> ignore
     0 // return an integer exit code
