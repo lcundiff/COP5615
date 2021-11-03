@@ -98,14 +98,14 @@ let checkIfFinished() =
     // 10 8 = 80
     // but we stop one of the actors after 5
     // so total is 8 * 9 + 5 = 77 or 10 * 8 - 8  + 5
-    if (hopsList.Length >= (numOfNodes * numOfRequests) - numOfRequests + 5)
+    if (hopsList.Length >= (numOfNodes * numOfRequests))
     then 
         let mutable sum = 0
         for num in hopsList do
             sum <- sum + num 
         
         let average = float sum / (float hopsList.Length)
-        printfn "\nFinished with fewer hops due to node death. \nTotal Hops: %d\nAverage hops per requests: %f" hopsList.Length average
+        printfn "Total Hops: %d\nAverage hops per requests: %f" hopsList.Length average
         Environment.Exit 0
     
 let fix_fingers (nodeId:int) (sortedNodes:int list) = 
@@ -220,16 +220,6 @@ let chordActor (id: int) (keyList: int list) = spawn system (string id) <| fun m
                 system.Scheduler.Advanced.ScheduleRepeatedly (TimeSpan.FromMilliseconds(0.0), TimeSpan.FromMilliseconds(1000.0), fun () -> 
                     if !sentRequests < numOfRequests
                     then
-                        lock _lock (fun () ->
-                            if (!sentRequests >= 5 && DOTHIS) then
-                                if integratedKeyList.Length > 0 then
-                                    DOTHIS <- false
-                                    printfn "Node death: Node %i, with keys: %A. " id integratedKeyList
-                                    delete id integratedKeyList
-                                    mailbox.Self.Tell(PoisonPill.Instance)
-                                    //mailbox.Context.System.Terminate() |> ignore
-                            // find it in the finger table
-                            )
                         incr sentRequests
                         // Don't allow KEYS that Exist
                         // [node1; key1; key2] [node2; key3; key4]
