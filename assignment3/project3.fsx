@@ -110,10 +110,13 @@ let getRandomKey(keyList) =
         then check <- false
     key
 
+// [3 8]
 let checkIfFinished() =
     //printf "\ntotal requests: %i" hopsList.Length
-    // 
-    if (hopsList.Length >= (numOfNodes * numOfRequests) - (numOfRequests - 5))
+    // 10 8 = 80
+    // but we stop one of the actors after 5
+    // so total is 8 * 9 + 5 = 77 or 10 * 8 - 8  + 5
+    if (hopsList.Length >= (numOfNodes * numOfRequests) - numOfRequests + 5)
     then 
         let mutable sum = 0
         for num in hopsList do
