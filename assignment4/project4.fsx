@@ -11,8 +11,8 @@ open System.Collections.Generic
 let system = ActorSystem.Create("FSharp")
 
 type Message =
-    | Tweeting of string // trigger client to tweet -> will be triggered by simulator
-    | Tweet of string * string // send tweet to server 
+    | Tweeting of string * string list// trigger client to tweet -> will be triggered by simulator
+    | Tweet of string * string * string list // send tweet to server 
     | ReTweet of string * string * string // send tweet to server 
     | ReTweeting of string * string // send tweet to server 
     | HashTagTweets of string // sends hashtag to server to query for tweets
@@ -30,6 +30,8 @@ type Message =
 
 //let mutable clients = [] 
 let users = new Dictionary<string, IActorRef>()
+let tweetsByHash = new Dictionary<string, string list>()
+
 
 let showTweets (tweets:string list) = 
     printfn "tweets %A" tweets |> ignore // placeholder
@@ -41,11 +43,19 @@ let findSubscribers (userId:string) =
     let subscribers = [subscriber;subscriber2]
     subscribers
 
-let publishTweet (tweetMsg,id) = 
+let findTweets (hashtag:string) =
+    tweetsByHash.[hashtag]
+
+let publishTweet (tweetMsg,id,hashtags) = 
+    
     let subscribers = findSubscribers(id)
     for sub in subscribers do 
         let tweet = "user: " + id + " : " + tweetMsg
         sub <! AddTweet(tweet) //
+    
+    for hashtag in hashtags do
+        tweetsByHash.Add(hashtag,[tweetMsg]) // need to append to current list but doing this temp for now 
+
 
 let addFollower(subscriberId, subscribedToId) = 
     users.[subscribedToId:string] <! AddFollower(subscriberId)
@@ -58,13 +68,16 @@ let server = spawn system (string id) <| fun mailbox ->
         let! msg = mailbox.Receive() 
         let sender = mailbox.Sender()
         match msg with
-            | Tweet(tweets, id) ->
-                publishTweet(tweets,id)
+            | Tweet(tweets, id, hashtags) ->
+                publishTweet(tweets,id,hashtags)
                 sender <! Success // let client know we succeeded (idk if this is neccessary, but just adding it for now)
             | Subscribe(subscriber, subscribedTo) -> 
                 addFollower(subscriber, subscribedTo)
             | Unsubscribe(subscriber, subscribedTo) -> 
                 removeFollower(subscriber, subscribedTo)
+            | HashTagTweets(hashtag) -> 
+                let hashTweets = findTweets(hashtag)
+                sender <! ReceiveTweets(hashTweets)
         return! loop() 
     }
     loop()  
@@ -86,9 +99,9 @@ let client (id: string) = spawn system (string id) <| fun mailbox ->
         let! msg = mailbox.Receive() 
         let sender = mailbox.Sender()
         match msg with
-            | Tweeting(tweet) -> // user tweeted (triggered by simulator)
+            | Tweeting(tweet,hashTags) -> // user tweeted (triggered by simulator)
                 myTweets <- List.append myTweets [tweet] // store users own tweets for querying
-                server <! Tweet(tweet,id) // tell the server to send tweet to subscribers
+                server <! Tweet(tweet,id,hashTags) // tell the server to send tweet to subscribers
             | ReTweeting(tweet,tweeter) ->
                  server <! ReTweet(tweet,id,tweeter) // do same as normal tweet but send the original author (tweeter)
             | Subscribing(subscribedTo) -> // user clicked subscribe on a user (triggered by simulator)
@@ -122,7 +135,7 @@ let client (id: string) = spawn system (string id) <| fun mailbox ->
 // will simulate users interacting with Twitter by sending messages to certain clients
 let simulator() = 
     users.["0"] <! Subscribing("1") // user 0 subscribes to user 1
-    users.["1"] <! Tweeting("yo")
+    users.["1"] <! Tweeting("yo",["#yo"])
     // we need to find way to wait for async call to finish before continuing, but not sure how in f#
     users.["0"] <! SubscribedToTweets // view tweets of who they follow
     
