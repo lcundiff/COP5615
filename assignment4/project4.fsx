@@ -186,15 +186,15 @@ let simulator() =
     // we need to find way to wait for async call to finish before continuing, but not sure how in f#
     users.["0"] <! SubscribedToTweets // view tweets of who they follow
 
-    // TODO: Simulate periods of live connection and disconnection for users 
+    // TODO: "Simulate periods of live connection and disconnection for users"
 
-    // TODO: Simulate a Zipf distribution on the number of subscribers. For accounts with a lot of subscribers, increase the number of tweets. Make some of these messages re-tweets
+    // TODO: "Simulate a Zipf distribution on the number of subscribers. For accounts with a lot of subscribers, increase the number of tweets. Make some of these messages re-tweets"
 
 [<EntryPoint>]
 let main argv = 
     registerAccounts(2) // init some test accounts
     simulator()
 
-    // TODO: You need to measure various aspects of your simulator and report performance 
+    // TODO: "You need to measure various aspects of your simulator and report performance"
     System.Console.ReadLine() |> ignore
     0 // return an integer exit code
