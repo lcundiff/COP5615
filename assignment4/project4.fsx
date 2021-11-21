@@ -39,8 +39,6 @@ let tweetsByUser = new Dictionary<string, string list>()
 //let subsByUser = new Dictionary<string, string list>()
 
 
-let showTweets (tweets:string list) = 
-    printfn "tweets %A" tweets |> ignore // placeholder
 
 
 let findTweets (keys:string list, DB:Dictionary<string, string list>) =
@@ -51,7 +49,7 @@ let findTweets (keys:string list, DB:Dictionary<string, string list>) =
 
 let publishTweet (tweetMsg,id,hashtags,ogTweeter) = 
     let tweet = "user: " + id + " tweeted: " + tweetMsg
-        
+
     // add tweet to our "DB"
     if tweetsByUser.ContainsKey(id)
     then List.append tweetsByUser.[id] [tweet] |> ignore // append tweets to list
@@ -105,6 +103,10 @@ let removeFromList(sub, subs) =
     |> List.filter fst |> List.map snd
 
 let client (id: string) = spawn system (string id) <| fun mailbox ->
+    
+    let showTweets (tweets:string list, tweetType:string) = 
+        printfn "%s tweets %A" tweetType tweets |> ignore // placeholder
+    
     // store client-side data for "live delivery" as described in project description
     let liveData = new Dictionary<string, string list>()
     liveData.Add("myTweets",[])
@@ -119,14 +121,18 @@ let client (id: string) = spawn system (string id) <| fun mailbox ->
         let sender = mailbox.Sender()
         match msg with
             | Tweeting(tweetMsg,hashTags,mentions) -> // user tweeted (triggered by simulator)
+                printfn("tweeting")
                 liveData.["myTweets"] <- List.append liveData.["myTweets"] [tweetMsg] // store users own tweets
                 server <! Tweet(tweetMsg,id,hashTags,mentions) // tell the server to send tweet to subscribers
+                sender <! Success
             | ReTweeting(tweet,hashtags,mentions,tweeter) ->
                 let reTweet = "retweet from user: " + tweeter + ": " + tweet // just modifying the tweet for retweeting
                 server <! Tweet(reTweet,id,hashtags,mentions) // do same as normal tweet but send the original author (tweeter)
             | Subscribing(subscribedTo) -> // user clicked subscribe on a user (triggered by simulator)
+                printfn("subscribing")
                 mySubs <- List.append mySubs [subscribedTo] 
                 server <! Subscribe(id,subscribedTo) 
+                sender <! Success
             | Unsubscribing(subscribedTo) -> // simulator trigger unsubscribe
                 removeFromList(subscribedTo, mySubs) |> ignore
                 server <! Unsubscribe(id,subscribedTo)
@@ -135,16 +141,17 @@ let client (id: string) = spawn system (string id) <| fun mailbox ->
             | RemoveFollower(subscriber) ->
                 removeFromList(subscriber, myFollowers) |> ignore             
             | SubscribedToTweets -> // Views tweets of users they subscribed to (simulator)
-                showTweets(liveData.["subscribedTo"]) 
+                printfn("here2")
+                server <! SubscribedTweets(mySubs)
             | HashTagTweets(hashtag) ->
                 server <! HashTagTweets(hashtag)
             | MentionedTweets(userId) ->
                 server <! MentionedTweets(userId)
             | ReceiveTweets(tweets,tweetType) ->
                 liveData.[tweetType] <- tweets // replace client side data 
-                showTweets(tweets)
+                showTweets(tweets,tweetType)
             | MyTweets -> // idk if this will be needed, just adding it here for now
-                showTweets(liveData.["myTweets"])
+                 printfn "my tweets %A" liveData.["myTweets"] |> ignore 
             // Add tweet is for live loading data after its already been queried 
             | AddTweet(tweet,tweetType) -> // server telling us someone we subscribed to tweeted (can be used for live data)
                 //printfn("adding tweet: %s") tweet
@@ -169,8 +176,13 @@ let registerAccounts numAccounts =
         
 // will simulate users interacting with Twitter by sending messages to certain clients
 let simulator() = 
-    users.["0"] <! Subscribing("1") // user 0 subscribes to user 1
-    users.["1"] <! Tweeting("yo",["#yo"],["@0"])
+    // user 0 subscribes to user 1
+    let subscribingRes = ( users.["0"] <? Subscribing("1") )
+    let subscribed = Async.RunSynchronously (subscribingRes, 3000)
+    
+    let tweeted = Async.RunSynchronously (users.["1"] <? Tweeting("yo",["#yo"],["@0"]), 100)
+    
+    //printfn("here")
     // we need to find way to wait for async call to finish before continuing, but not sure how in f#
     users.["0"] <! SubscribedToTweets // view tweets of who they follow
 
