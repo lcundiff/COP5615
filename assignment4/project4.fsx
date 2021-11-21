@@ -121,7 +121,7 @@ let client (id: string) = spawn system (string id) <| fun mailbox ->
         let sender = mailbox.Sender()
         match msg with
             | Tweeting(tweetMsg,hashTags,mentions) -> // user tweeted (triggered by simulator)
-                printfn("tweeting")
+                //printfn("tweeting")
                 liveData.["myTweets"] <- List.append liveData.["myTweets"] [tweetMsg] // store users own tweets
                 server <! Tweet(tweetMsg,id,hashTags,mentions) // tell the server to send tweet to subscribers
                 sender <! Success
@@ -129,7 +129,7 @@ let client (id: string) = spawn system (string id) <| fun mailbox ->
                 let reTweet = "retweet from user: " + tweeter + ": " + tweet // just modifying the tweet for retweeting
                 server <! Tweet(reTweet,id,hashtags,mentions) // do same as normal tweet but send the original author (tweeter)
             | Subscribing(subscribedTo) -> // user clicked subscribe on a user (triggered by simulator)
-                printfn("subscribing")
+                //printfn("subscribing")
                 mySubs <- List.append mySubs [subscribedTo] 
                 server <! Subscribe(id,subscribedTo) 
                 sender <! Success
@@ -141,7 +141,7 @@ let client (id: string) = spawn system (string id) <| fun mailbox ->
             | RemoveFollower(subscriber) ->
                 removeFromList(subscriber, myFollowers) |> ignore             
             | SubscribedToTweets -> // Views tweets of users they subscribed to (simulator)
-                printfn("here2")
+                //printfn("here2")
                 server <! SubscribedTweets(mySubs)
             | HashTagTweets(hashtag) ->
                 server <! HashTagTweets(hashtag)
@@ -178,12 +178,10 @@ let registerAccounts numAccounts =
 let simulator() = 
     // user 0 subscribes to user 1
     let subscribingRes = ( users.["0"] <? Subscribing("1") )
-    let subscribed = Async.RunSynchronously (subscribingRes, 3000)
+    let subscribed = Async.RunSynchronously (subscribingRes, 1000)
     
-    let tweeted = Async.RunSynchronously (users.["1"] <? Tweeting("yo",["#yo"],["@0"]), 100)
+    let tweeted = Async.RunSynchronously (users.["1"] <? Tweeting("yo",["#yo"],["@0"]), 1000)
     
-    //printfn("here")
-    // we need to find way to wait for async call to finish before continuing, but not sure how in f#
     users.["0"] <! SubscribedToTweets // view tweets of who they follow
 
     // TODO: "Simulate periods of live connection and disconnection for users"
