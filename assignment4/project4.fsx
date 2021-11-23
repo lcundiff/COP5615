@@ -132,7 +132,7 @@ let client (id: string) = spawn system (string id) <| fun mailbox ->
                 //printfn("subscribing")
                 mySubs <- List.append mySubs [subscribedTo] 
                 server <! Subscribe(id,subscribedTo) 
-                sender <! Success
+                sender <! Success // async needs this to continue
             | Unsubscribing(subscribedTo) -> // simulator trigger unsubscribe
                 removeFromList(subscribedTo, mySubs) |> ignore
                 server <! Unsubscribe(id,subscribedTo)
@@ -173,6 +173,7 @@ let registerAccounts numAccounts =
     for i in 0..numAccounts do 
         let name = i |> string
         registerAccount(name)
+    printfn "%i accounts created" numAccounts
         
 // will simulate users interacting with Twitter by sending messages to certain clients
 let simulator() = 
@@ -190,7 +191,11 @@ let simulator() =
 
 [<EntryPoint>]
 let main argv = 
-    registerAccounts(2) // init some test accounts
+    printfn "Welcome to Twitter Simulator, how many accounts would you like to create?"
+    let inputLine = Console.ReadLine() 
+    let inputLine2 = Console.ReadLine() 
+    let accountNum = inputLine |> int // cast to int
+    registerAccounts(accountNum) // init some test accounts
     simulator()
 
     // TODO: "You need to measure various aspects of your simulator and report performance"
