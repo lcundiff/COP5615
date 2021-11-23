@@ -193,7 +193,6 @@ let simulator() =
 let main argv = 
     printfn "Welcome to Twitter Simulator, how many accounts would you like to create?"
     let inputLine = Console.ReadLine() 
-    let inputLine2 = Console.ReadLine() 
     let accountNum = inputLine |> int // cast to int
     registerAccounts(accountNum) // init some test accounts
     simulator()
