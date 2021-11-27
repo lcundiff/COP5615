@@ -242,6 +242,14 @@ let client (id: string) = spawn system (string id) <| fun mailbox ->
             | ReTweeting(tweet,hashtags,mentions,tweeter) ->
                 let reTweet = "retweet from user: " + tweeter + ": " + tweet // just modifying the tweet for retweeting
                 server <! Tweet(reTweet,id,hashtags,mentions) // do same as normal tweet but send the original author (tweeter)
+            | Subscribing(subscribedTo) -> // user clicked subscribe on a user (triggered by simulator)
+                //printfn("subscribing")
+                mySubs <- List.append mySubs [subscribedTo] 
+                server <! Subscribe(id,subscribedTo) 
+                sender <! Success // async needs this to continue
+            | Unsubscribing(subscribedTo) -> // simulator trigger unsubscribe
+                removeFromList(subscribedTo, mySubs) |> ignore
+                server <! Unsubscribe(id,subscribedTo)
             | AddFollower(subscriber) ->
                 myFollowers <- List.append myFollowers [subscriber] 
                 printfn "%s: followers now (after adding): %A" id myFollowers
@@ -278,6 +286,7 @@ let registerAccounts numAccounts =
         registerAccount(name)
         // Added <! Start to enable disconnect and reconnect.
         users.[name] <! Start
+    printfn "%i accounts created" numAccounts
         
 // will simulate users interacting with Twitter by sending messages to certain clients
 let simulator() = 
@@ -295,7 +304,10 @@ let simulator() =
 
 [<EntryPoint>]
 let main argv = 
-    registerAccounts(3) // init some test accounts
+    printfn "Welcome to Twitter Simulator, how many accounts would you like to create?"
+    let inputLine = Console.ReadLine() 
+    let accountNum = inputLine |> int // cast to int
+    registerAccounts(accountNum) // init some test accounts
     // simulator()
 
     // TODO: "You need to measure various aspects of your simulator and report performance"
