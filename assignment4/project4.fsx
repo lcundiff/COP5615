@@ -146,7 +146,7 @@ let client (id: string) = spawn system (string id) <| fun mailbox ->
     // store client-side data for "live delivery" as described in project description
     let liveData = new Dictionary<string, string list>()
     liveData.Add("myFeed",[]) //myFeed is any tweets from users im subscribed to
-    liveData.Add("subscribedTo",[])
+    liveData.Add("subscribedTo",[]) //
     liveData.Add("hashTag",[]) // stores most recently loaded tweets by hashtag
     liveData.Add("mentions",[]) //
     let mutable connected = true
