@@ -75,7 +75,7 @@ let publishTweet (tweetMsg,id,hashtags,mentions) =
         else tweetsByHash.Add(hashtag,[tweet]) // init tweet list for this hashtag 
     
     for mention in mentions do
-        if tweetsByHash.ContainsKey(mention)
+        if tweetsByMention.ContainsKey(mention)
         then List.append tweetsByMention.[mention] [tweet] |> ignore // append tweets to list
         else tweetsByMention.Add(mention,[tweet]) // init tweet list for this mention 
     
@@ -160,7 +160,9 @@ let tweet(id:string,rndUserId:string, liveData:Dictionary<string,string list>,rn
 
     if(rndNum <= 2) // 2/10 times its a retweet
     then
-        let rndUserId2 = random.Next((users.Count)) |> string 
+        let mutable rndUserId2 = random.Next((users.Count)) |> string 
+        while (not (tweetsByUser.ContainsKey(rndUserId2))) do
+            rndUserId2 <- random.Next((users.Count)) |> string 
         let rndTweet = tweetsByUser.[rndUserId2].[0] // 0 is tmp
         let reTweet = tweet + " Retweet: " + rndUserId2 + ": " + rndTweet // just modifying the tweet for retweeting
         tweet <- reTweet
