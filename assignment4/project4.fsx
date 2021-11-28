@@ -99,8 +99,9 @@ let rec remove_if l predicate =
     match l with
     | [] -> []
     | x::rest -> 
-        if predicate(x) then
-        (remove_if rest predicate)
+        if predicate(x) 
+        then
+            (remove_if rest predicate)
         else x::(remove_if rest predicate)
 
 let removeFollower(subscriberId, subscribedToId) = 
