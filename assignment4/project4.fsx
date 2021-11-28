@@ -48,7 +48,7 @@ let usersSubscribers = new Dictionary<string, string list>()
 
 
 let createRndWord() = 
-    let rndCharCount = random.Next(0, 10)
+    let rndCharCount = random.Next(0, 10) // word will be between 0-10 chars
     let chars = Array.concat([[|'a' .. 'z'|];[|'A' .. 'Z'|];[|'0' .. '9'|]])
     let sz = Array.length chars in
     String(Array.init rndCharCount (fun _ -> chars.[random.Next sz]))
@@ -124,7 +124,7 @@ let server = spawn system (string id) <| fun mailbox ->
                 removeFollower(subscriber, subscribedTo)
             | SubscribedTweets(subs) -> 
                 let subscribedTweets = findTweets(subs, tweetsByUser)
-                sender <! ReceiveTweets(subscribedTweets,"myFeed")
+                sender <! ReceiveTweets(subscribedTweets,"subscribedTo")
             | HashTagTweets(hashtags) -> 
                 let hashTweets = findTweets(hashtags, tweetsByHash)
                 sender <! (hashTweets,"hashTag")
@@ -133,6 +133,8 @@ let server = spawn system (string id) <| fun mailbox ->
                 sender <! ReceiveTweets(mentionedTweets,"mentions")
             | ToggleConnection(id, status) ->
                 connectionStatus.[id] <- status
+            | _ -> 
+                printfn "ERROR: server recieved unrecognized message"
 
 
         return! loop() 
@@ -194,8 +196,8 @@ let client (id: string) = spawn system (string id) <| fun mailbox ->
     
     // store client-side data for "live delivery" as described in project description
     let liveData = new Dictionary<string, string list>()
-    liveData.Add("myFeed",[]) //myFeed is any tweets from users im subscribed to
-    liveData.Add("subscribedTo",[]) //
+    liveData.Add("myTweets",[]) //
+    liveData.Add("subscribedTo",[]) // subscribedTo is any tweets from users im subscribed to
     liveData.Add("hashTag",[]) // stores most recently loaded tweets by hashtag
     liveData.Add("mentions",[]) //
     liveData.Add("mySubs",[])
@@ -273,6 +275,8 @@ let client (id: string) = spawn system (string id) <| fun mailbox ->
                 liveData.[tweetType] <- List.append liveData.[tweetType] [tweet] 
             | Success -> 
                 printfn "server message succeeded!"
+            | _ -> 
+                printfn "ERROR: client recieved unrecognized message"
 
         return! loop() 
     }
