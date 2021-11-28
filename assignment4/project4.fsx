@@ -196,11 +196,11 @@ let client (id: string) = spawn system (string id) <| fun mailbox ->
     
     // store client-side data for "live delivery" as described in project description
     let liveData = new Dictionary<string, string list>()
-    liveData.Add("myTweets",[]) //
-    liveData.Add("subscribedTo",[]) // subscribedTo is any tweets from users im subscribed to
-    liveData.Add("hashTag",[]) // stores most recently loaded tweets by hashtag
-    liveData.Add("mentions",[]) //
-    liveData.Add("mySubs",[])
+    liveData.Add("myTweets",[]) // stores local live data of all tweets of this user
+    liveData.Add("subscribedTo",[]) // stores local live data of any tweets from users im subscribed to
+    liveData.Add("hashTag",[]) // stores local live data of most recent query of tweets by hashtag
+    liveData.Add("mentions",[]) // stores local live data of most recent query of tweets by mentions from a specific user (could be me)
+    liveData.Add("mySubs",[]) // stores local live data of user ids of who im subsribed to
     let mutable connected = true
     let mutable myFollowers: string list  = []
     let rec loop() = actor {
