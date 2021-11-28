@@ -153,15 +153,18 @@ let removeFromList(sub, subs) =
 
 let tweet(id:string,rndUserId:string, liveData:Dictionary<string,string list>,rndNum:int) = 
     printfn "%s is tweeting." id
+    let hashtag = "#" + createRndWord()
+    let mention = (rndUserId) // assume users start from 0 and increment 
+    let tweetMsg = createRndWord()
+    let mutable tweet = "User: " + id + " tweeted @"
 
-    let mutable tweet = "User: " + id + " tweeted"
-    let hashtag = "#Hashtag" + (rndUserId)
-    let mention = "@" + (rndUserId) // assume users start from 0 and increment 
     if(rndNum <= 2) // 2/10 times its a retweet
     then
-        let reTweet = tweet + " a retweet from user: " + rndUserId  // just modifying the tweet for retweeting
+        let rndUserId2 = random.Next((users.Count)) |> string 
+        let rndTweet = tweetsByUser.[rndUserId2].[0] // 0 is tmp
+        let reTweet = tweet + " Retweet: " + rndUserId2 + ": " + rndTweet // just modifying the tweet for retweeting
         tweet <- reTweet
-
+    tweet <- tweet + " " + hashtag
     server <! Tweet(tweet, id, [hashtag], [mention])
     List.append liveData.["myTweets"] [tweet] 
 
@@ -175,7 +178,7 @@ let subscribe(id:string,rndUserId:string, liveData:Dictionary<string,string list
     server <! Subscribe(id, rndUserId)
     List.append liveData.["mySubs"] [rndUserId] // update local data
 
-let unsubscribe(id:string,rndUserId:string, liveData:Dictionary<string,string list>) =
+let unsubscribe(id:string, liveData:Dictionary<string,string list>) =
     // We will only unsubscribe if we have subscribed to someone already.
     // This will prevent us from getting in an infinite loop
     if ((liveData.["subscribedTo"]).Length > 0)
@@ -231,7 +234,7 @@ let client (id: string) = spawn system (string id) <| fun mailbox ->
                     then liveData.["mySubs"] <- subscribe(id,randomUserId,liveData)
                     // UNSUBSCRIBE
                     else if (randomNumber <= 30)
-                    then unsubscribe(id,randomUserId,liveData)
+                    then unsubscribe(id,liveData)
 
                     // RETRIEVE SUBSCRIBED_TO_TWEETS: TWEETS FROM USERS THAT THIS USER IS SUBSCRIBED TO.
                     else if (randomNumber <= 40)
