@@ -40,6 +40,7 @@ let connectionStatus = new Dictionary<string, bool>()
 // These Dicts will act as our DB
 let tweetsByHash = new Dictionary<string, string list>()
 let tweetsByUser = new Dictionary<string, string list>()
+let tweetsByMention = new Dictionary<string, string list>()
 
 // All users subscribed to a user
 let usersSubscribers = new Dictionary<string, string list>()
@@ -54,7 +55,7 @@ let findTweets (keys:string list, DB:Dictionary<string, string list>) =
         then tweets <- List.append tweets DB.[key]
     tweets
 
-let publishTweet (tweetMsg,id,hashtags,ogTweeter) = 
+let publishTweet (tweetMsg,id,hashtags,mentions) = 
     let tweet = "user: " + id + " tweeted: " + tweetMsg
 
     // add tweet to our "DB"
@@ -62,11 +63,17 @@ let publishTweet (tweetMsg,id,hashtags,ogTweeter) =
     then List.append tweetsByUser.[id] [tweet] |> ignore // append tweets to list
     else tweetsByUser.Add(id,[tweet]) // init tweet list for this user
 
+    // add 
     for hashtag in hashtags do
         if tweetsByHash.ContainsKey(hashtag)
         then List.append tweetsByHash.[hashtag] [tweet] |> ignore // append tweets to list
         else tweetsByHash.Add(hashtag,[tweet]) // init tweet list for this hashtag 
-
+    
+    for mention in mentions do
+        if tweetsByHash.ContainsKey(mention)
+        then List.append tweetsByMention.[mention] [tweet] |> ignore // append tweets to list
+        else tweetsByMention.Add(mention,[tweet]) // init tweet list for this mention 
+    
     // TODO:
     // Shouldn't the tweet also go to the appropriate users? Its just being added to a list right now.
     // UserX should get a tweet if they are following UserY
@@ -115,7 +122,7 @@ let server = spawn system (string id) <| fun mailbox ->
                 sender <! ReceiveTweets(subscribedTweets,"myFeed")
             | HashTagTweets(hashtags) -> 
                 let hashTweets = findTweets(hashtags, tweetsByHash)
-                sender <! ReceiveTweets(hashTweets,"hashTag")
+                sender <! (hashTweets,"hashTag")
             // TODO: Your mentioned tweets does not have the right functionality
             // Right now it just pulls all tweets that a user posted
             // It does not pull all tweets that mention a user.
