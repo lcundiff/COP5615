@@ -152,7 +152,6 @@ let removeFromList(sub, subs) =
 
 
 let tweet(id:string,rndUserId:string, liveData:Dictionary<string,string list>,rndNum:int) = 
-    printfn "%s is tweeting." id
     let hashtag = "#" + createRndWord()
     let mention = (rndUserId) // assume users start from 0 and increment 
     let tweetMsg = createRndWord()
@@ -160,12 +159,14 @@ let tweet(id:string,rndUserId:string, liveData:Dictionary<string,string list>,rn
 
     if(rndNum <= 2) // 2/10 times its a retweet
     then
-        let mutable rndUserId2 = random.Next((users.Count)) |> string 
+        printfn "%s is retweeting." id
+        let mutable rndUserId2 = random.Next((numOfAccounts)) |> string 
         while (not (tweetsByUser.ContainsKey(rndUserId2))) do
-            rndUserId2 <- random.Next((users.Count)) |> string 
+            rndUserId2 <- random.Next((numOfAccounts)) |> string 
         let rndTweet = tweetsByUser.[rndUserId2].[0] // 0 is tmp
         let reTweet = tweet + " Retweet: " + rndUserId2 + ": " + rndTweet // just modifying the tweet for retweeting
         tweet <- reTweet
+    else printfn "%s is tweeting." id
     tweet <- tweet + " " + hashtag
     server <! Tweet(tweet, id, [hashtag], [mention])
     List.append liveData.["myTweets"] [tweet] 
@@ -174,8 +175,8 @@ let subscribe(id:string,rndUserId:string, liveData:Dictionary<string,string list
     // We will only do a subscribe IF we haven't subscribed to everyone yet.
     // This will prevent us from getting in an infinite loop. 
     let mutable rndNonSubUserId = rndUserId
-    while (List.contains (rndUserId) (liveData.["subscribedTo"]) && (liveData.["subscribedTo"]).Length < users.Count) do // sub to someone new
-        rndNonSubUserId <- random.Next((users.Count)) |> string
+    while (List.contains (rndUserId) (liveData.["subscribedTo"]) && (liveData.["subscribedTo"]).Length < numOfAccounts) do // sub to someone new
+        rndNonSubUserId <- random.Next((numOfAccounts)) |> string
     printfn "%s is subscribing to %s." id rndUserId    
     server <! Subscribe(id, rndUserId)
     List.append liveData.["mySubs"] [rndUserId] // update local data
@@ -224,9 +225,9 @@ let client (id: string) = spawn system (string id) <| fun mailbox ->
                         connected <- true
                         server <! ToggleConnection(id, connected) // if we connect, we should query as well.
                 else 
-                    let mutable randomUserId = random.Next((users.Count)) |> string // TODO: Just a random user -- can be changed
+                    let mutable randomUserId = random.Next((numOfAccounts)) |> string // TODO: Just a random user -- can be changed
                     while (not (users.ContainsKey(randomUserId))) do // is this neccessary? 
-                        randomUserId <- random.Next((users.Count)) |> string
+                        randomUserId <- random.Next((numOfAccounts)) |> string
                     // TWEET 
                     if (randomNumber <= 10) 
                     then liveData.["myTweets"] <- tweet(id,randomUserId,liveData,randomNumber)
@@ -264,10 +265,10 @@ let client (id: string) = spawn system (string id) <| fun mailbox ->
                 )
             | AddFollower(subscriber) ->
                 myFollowers <- List.append myFollowers [subscriber] 
-                printfn "%s: followers now (after adding): %A" id myFollowers
+                //printfn "%s: followers now (after adding): %A" id myFollowers
             | RemoveFollower(subscriber) ->
                 removeFromList(subscriber, myFollowers) |> ignore 
-                printfn "%s: followers now (after removing): %A" id myFollowers
+                //printfn "%s: followers now (after removing): %A" id myFollowers
             | ReceiveTweets(tweets,tweetType) ->
                 liveData.[tweetType] <- tweets // replace client side data 
                 showTweets(tweets,tweetType)
