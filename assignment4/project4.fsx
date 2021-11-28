@@ -200,9 +200,9 @@ let subscribe(id:string,rndUserId:string, liveData:Dictionary<string,string list
 let unsubscribe(id:string, liveData:Dictionary<string,string list>) =
     // We will only unsubscribe if we have subscribed to someone already.
     // This will prevent us from getting in an infinite loop
-    if ((liveData.["mySubs"]).Length > 0)
+    if ((liveData.["mySubs"]).Length > 1)
     then 
-        let randomSubIndex = random.Next((liveData.["mySubs"].Length))
+        let randomSubIndex = random.Next(1, (liveData.["mySubs"].Length))
         let randomSubUserId = liveData.["mySubs"].[randomSubIndex]
         printfn "%s is unsubscribing from %s." id randomSubUserId    
         server <! Unsubscribe(id, randomSubUserId)
