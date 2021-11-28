@@ -151,7 +151,7 @@ let removeFromList(sub, subs) =
     |> List.filter fst |> List.map snd
 
 
-let tweet(id:string,rndNum:int,rndUserId:string) = 
+let tweet(id:string,rndUserId:string, liveData:Dictionary<string,string list>,rndNum:int) = 
     printfn "%s is tweeting." id
 
     let mutable tweet = "User: " + id + " tweeted"
@@ -163,6 +163,29 @@ let tweet(id:string,rndNum:int,rndUserId:string) =
         tweet <- reTweet
 
     server <! Tweet(tweet, id, [hashtag], [mention])
+    List.append liveData.["myTweets"] [tweet] 
+
+let subscribe(id:string,rndUserId:string, liveData:Dictionary<string,string list>) = 
+    // We will only do a subscribe IF we haven't subscribed to everyone yet.
+    // This will prevent us from getting in an infinite loop. 
+    let mutable rndNonSubUserId = rndUserId
+    while (List.contains (rndUserId) (liveData.["subscribedTo"]) && (liveData.["subscribedTo"]).Length < users.Count) do // sub to someone new
+        rndNonSubUserId <- random.Next((users.Count)) |> string
+    printfn "%s is subscribing to %s." id rndUserId    
+    server <! Subscribe(id, rndUserId)
+    List.append liveData.["mySubs"] [rndUserId] // update local data
+
+let unsubscribe(id:string,rndUserId:string, liveData:Dictionary<string,string list>) =
+    // We will only unsubscribe if we have subscribed to someone already.
+    // This will prevent us from getting in an infinite loop
+    if ((liveData.["subscribedTo"]).Length > 0)
+    then 
+        let randomSubIndex = random.Next((liveData.["subscribedTo"].Length))
+        let randomSubUserId = liveData.["subscribedTo"].[randomSubIndex]
+        printfn "%s is unsubscribing from %s." id randomSubUserId    
+        server <! Unsubscribe(id, randomSubUserId)
+        removeFromList(randomSubUserId, liveData.["mySubs"]) |> ignore // remove local data
+
 
 let client (id: string) = spawn system (string id) <| fun mailbox ->
     
@@ -175,8 +198,8 @@ let client (id: string) = spawn system (string id) <| fun mailbox ->
     liveData.Add("subscribedTo",[]) //
     liveData.Add("hashTag",[]) // stores most recently loaded tweets by hashtag
     liveData.Add("mentions",[]) //
+    liveData.Add("mySubs",[])
     let mutable connected = true
-    let mutable mySubs: string list  = []
     let mutable myFollowers: string list  = []
     let rec loop() = actor {
         let! msg = mailbox.Receive() 
@@ -201,37 +224,20 @@ let client (id: string) = spawn system (string id) <| fun mailbox ->
                         randomUserId <- random.Next((users.Count)) |> string
                     // TWEET 
                     if (randomNumber <= 10) 
-                    then tweet(id,randomNumber,randomUserId)
+                    then liveData.["myTweets"] <- tweet(id,randomUserId,liveData,randomNumber)
 
                     // SUBSCRIBER TO A USER
                     else if (randomNumber <= 20)
-                    then 
-                        // We will only do a subscribe IF we haven't subscribed to everyone yet.
-                        // This will prevent us from getting in an infinite loop.
-                        if ((liveData.["subscribedTo"]).Length < users.Count) 
-                        then     
-                            while (List.contains (randomUserId) (liveData.["subscribedTo"])) do // sub to someone new
-                                randomUserId <- random.Next((users.Count)) |> string
-                            printfn "%s is subscribing to %s." id randomUserId    
-                            server <! Subscribe(id, randomUserId)
-                            mySubs <- List.append mySubs [randomUserId] // update local data
+                    then liveData.["mySubs"] <- subscribe(id,randomUserId,liveData)
                     // UNSUBSCRIBE
                     else if (randomNumber <= 30)
-                    then 
-                        // We will only unsubscribe if we have subscribed to someone already.
-                        // This will prevent us from getting in an infinite loop
-                        if ((liveData.["subscribedTo"]).Length > 0)
-                        then 
-                            let randomSubIndex = random.Next((liveData.["subscribedTo"].Length))
-                            let randomSubUserId = liveData.["subscribedTo"].[randomSubIndex]
-                            printfn "%s is unsubscribing from %s." id randomSubUserId    
-                            server <! Unsubscribe(id, randomSubUserId)
-                            removeFromList(randomSubUserId, mySubs) |> ignore // remove local data
+                    then unsubscribe(id,randomUserId,liveData)
+
                     // RETRIEVE SUBSCRIBED_TO_TWEETS: TWEETS FROM USERS THAT THIS USER IS SUBSCRIBED TO.
                     else if (randomNumber <= 40)
                     then
                         printfn "%s is requesting subscribed tweets." id    
-                        server <! SubscribedTweets(mySubs)
+                        server <! SubscribedTweets(liveData.["mySubs"])
                     // RETRIEVE TWEETS FOR HASHTAG
                     else if (randomNumber <= 49)
                     then
@@ -239,17 +245,17 @@ let client (id: string) = spawn system (string id) <| fun mailbox ->
                         let hashtag = "#" + (rndWord) 
                         printfn "%s is requesting the hashtag: %s." id hashtag    
                         server <! HashTagTweets([hashtag])
+                    // RETRIEVE TWEETS FROM MENTIONS
+                    else if (randomNumber <= 60)
+                    then
+                        printfn "%s is requesting mentions of %s." id randomUserId 
+                        server <! MentionedTweets(randomUserId)
                     // DISCONNECT
                     else if (randomNumber = 50)
                     then 
                         printfn "%s is disconnecting." id   
                         connected <- false
                         server <! ToggleConnection(id, connected)
-                    // MENTIONS
-                    else if (randomNumber <= 60)
-                    then
-                        printfn "%s is requesting mentions of %s." id randomUserId 
-                        server <! MentionedTweets(randomUserId)
                 )
             | AddFollower(subscriber) ->
                 myFollowers <- List.append myFollowers [subscriber] 
