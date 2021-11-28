@@ -44,7 +44,9 @@ let tweetsByMention = new Dictionary<string, string list>()
 
 // All users subscribed to a user
 let usersSubscribers = new Dictionary<string, string list>()
+let _lock = Object()
 
+let mutable (zipfSubscribers: string list) = []
 
 
 let createRndWord() = 
@@ -149,6 +151,9 @@ let removeFromList(sub, subs) =
     // Remove elements for which the flag is 'false' and drop the flags
     |> List.filter fst |> List.map snd
 
+let removeAt index list =
+    list |> List.indexed |> List.filter (fun (i, _) -> i <> index) |> List.map snd
+
 
 let tweet(id:string,rndUserId:string, liveData:Dictionary<string,string list>,rndNum:int) = 
     printfn "%s is tweeting." id
@@ -211,18 +216,18 @@ let client (id: string) = spawn system (string id) <| fun mailbox ->
 
                 let randomNumber = random.Next(0, 60)
                 // Every second there is a chance to disconnect or reconnect.
-                // Currently it is 1/100 chance every second to disconnect, and 1/100 chance every second to reconnect.
+                // Currently it is 1/60 chance every second to disconnect, and 1/5 chance every second to reconnect.
 
                 if (not connected)
                 then 
-                    if (randomNumber <= 12) // 12 arbitrarily. 
+                    if (randomNumber <= 12) // 12 arbitrarily. Gives a 20% chance to reconnect.
                     then 
                         printfn "%s is re-connecting." id
                         connected <- true
-                        server <! ToggleConnection(id, connected) // if we connect, we should query as well.
+                        server <! ToggleConnection(id, connected) // if we connect, we should query as well. TODO: Logan?
                 else 
                     let mutable randomUserId = random.Next((users.Count)) |> string // TODO: Just a random user -- can be changed
-                    while (not (users.ContainsKey(randomUserId))) do // is this neccessary? 
+                    while (not (users.ContainsKey(randomUserId))) do // is this neccessary? TODO: maybe not, but in the weird case where an actor doesn't get initialized it catches it.
                         randomUserId <- random.Next((users.Count)) |> string
                     // TWEET 
                     if (randomNumber <= 10) 
@@ -230,7 +235,21 @@ let client (id: string) = spawn system (string id) <| fun mailbox ->
 
                     // SUBSCRIBER TO A USER
                     else if (randomNumber <= 20)
-                    then liveData.["mySubs"] <- subscribe(id,randomUserId,liveData)
+                    then 
+                        // ZIPF Distribution
+                        let mutable randomSubscriberIndex = random.Next((zipfSubscribers.Length))
+                        let mutable index = 0 // Index is just a variable that ensures we don't get stuck in this loop forever.
+                        while (List.contains zipfSubscribers.[randomSubscriberIndex] liveData.["mySubs"] && index < 100) do 
+                            randomSubscriberIndex <- random.Next((zipfSubscribers.Length))
+                            index <- index + 1
+                        lock _lock (fun () -> 
+                            // Gets the id
+                            randomUserId <- zipfSubscribers.[randomSubscriberIndex]
+                            // Removes index from list.
+                            zipfSubscribers <- removeAt randomSubscriberIndex zipfSubscribers
+                        )
+
+                        liveData.["mySubs"] <- subscribe(id,randomUserId,liveData)
                     // UNSUBSCRIBE
                     else if (randomNumber <= 30)
                     then unsubscribe(id,liveData)
@@ -253,7 +272,7 @@ let client (id: string) = spawn system (string id) <| fun mailbox ->
                         printfn "%s is requesting mentions of %s." id randomUserId 
                         server <! MentionedTweets(randomUserId)
                     // DISCONNECT
-                    else if (randomNumber = 50)
+                    else if (randomNumber = 50) // Gives a 1/60 chance to disconnect.
                     then 
                         printfn "%s is disconnecting." id   
                         connected <- false
@@ -291,15 +310,16 @@ let registerAccount accountName =
 
 // this is used for testing "Simulate as many users as you can"
 let registerAccounts() = 
-    for i in 0..numOfAccounts do 
+    for i in 0..numOfAccounts-1 do 
         let name = i |> string
         registerAccount(name)
-        
+        let accountList = [for n in 1 .. (numOfAccounts/(i+1)) -> (string i)]
+        zipfSubscribers <- List.append zipfSubscribers accountList
     printfn "%i accounts created" numOfAccounts
         
 // will simulate users interacting with Twitter by sending messages to certain clients
 let simulator() = 
-    for i in 0..numOfAccounts do 
+    for i in 0..numOfAccounts-1 do 
         let name = i |> string
         users.[name] <! Simulate // Added <! Simulate to enable disconnect and reconnect.
     
@@ -312,8 +332,11 @@ let main argv =
     let inputLine = Console.ReadLine() 
     numOfAccounts <- inputLine |> int // cast to int
     registerAccounts() // init some test accounts
+    printfn "%i %A" zipfSubscribers.Length zipfSubscribers
     simulator() // go through those accounts and start simulations for each
 
     // TODO: "You need to measure various aspects of your simulator and report performance"
     System.Console.ReadLine() |> ignore
     0 // return an integer exit code
+
+    
