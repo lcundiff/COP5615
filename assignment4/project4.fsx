@@ -132,7 +132,7 @@ let server = spawn system (string id) <| fun mailbox ->
             // Right now it just pulls all tweets that a user posted
             // It does not pull all tweets that mention a user.
             | MentionedTweets(userId) -> 
-                let mentionedTweets = findTweets([userId],tweetsByUser)
+                let mentionedTweets = findTweets([userId],tweetsByMention)
                 sender <! ReceiveTweets(mentionedTweets,"mentions")
             | ToggleConnection(id, status) ->
                 connectionStatus.[id] <- status
@@ -149,6 +149,20 @@ let removeFromList(sub, subs) =
     |> List.mapi (fun i el -> (el <> sub, el)) 
     // Remove elements for which the flag is 'false' and drop the flags
     |> List.filter fst |> List.map snd
+
+
+let tweet(id:string,rndNum:int,rndUserId:string) = 
+    printfn "%s is tweeting." id
+
+    let mutable tweet = "User: " + id + " tweeted"
+    let hashtag = "#Hashtag" + (rndUserId)
+    let mention = "@" + (rndUserId) // assume users start from 0 and increment 
+    if(rndNum <= 2) // 2/10 times its a retweet
+    then
+        let reTweet = tweet + " a retweet from user: " + rndUserId  // just modifying the tweet for retweeting
+        tweet <- reTweet
+
+    server <! Tweet(tweet, id, [hashtag], [mention])
 
 let client (id: string) = spawn system (string id) <| fun mailbox ->
     
@@ -187,18 +201,8 @@ let client (id: string) = spawn system (string id) <| fun mailbox ->
                         randomUserId <- random.Next((users.Count)) |> string
                     // TWEET 
                     if (randomNumber <= 10) 
-                    then 
-                        printfn "%s is tweeting." id
+                    then tweet(id,randomNumber,randomUserId)
 
-                        let mutable tweet = "User: " + id + " tweeted"
-                        let hashtag = "#Hashtag" + (randomUserId)
-                        let mention = "@" + (randomUserId) // assume users start from 0 and increment 
-                        if(randomNumber <= 2) // 2/10 times its a retweet
-                        then
-                            let reTweet = tweet + " a retweet from user: " + randomUserId  // just modifying the tweet for retweeting
-                            tweet <- reTweet
-
-                        server <! Tweet(tweet, id, [hashtag], [mention])
                     // SUBSCRIBER TO A USER
                     else if (randomNumber <= 20)
                     then 
