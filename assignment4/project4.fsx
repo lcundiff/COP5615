@@ -13,7 +13,7 @@ let random = Random()
 let mutable numOfAccounts = 0
 type Message =
     | Tweeting of string * string list * string list // trigger client to tweet -> will be triggered by simulator
-    | Tweet of string * string * string list * string list // send tweet to server 
+    | Tweet of string * string * string list * string list // send tweet to server (tweet, id, hashtag list, mentions list)
     | ReTweet of string * string * string // send tweet to server 
     | ReTweeting of string * string list * string list * string // trigger client to retweet -> will be triggered by simulator
     | SubscribedTweets of string list
@@ -54,7 +54,7 @@ let createRndWord() =
     String(Array.init rndCharCount (fun _ -> chars.[random.Next sz]))
 
 let findTweets (keys:string list, DB:Dictionary<string, string list>) =
-    let mutable tweets = []
+    let mutable tweets = [""]
     for key in keys do
         if (DB.ContainsKey(key)) 
         then tweets <- List.append tweets DB.[key]
@@ -118,7 +118,7 @@ let server = spawn system (string id) <| fun mailbox ->
         match msg with
             | Tweet(tweets, id, hashtags, mentions) ->
                 publishTweet(tweets,id,hashtags,mentions)
-                sender <! Success // let client know we succeeded (idk if this is neccessary, but just adding it for now)
+                //sender <! Success // let client know we succeeded (idk if this is neccessary, but just adding it for now)
             | Subscribe(subscriber, subscribedTo) -> 
                 addFollower(subscriber, subscribedTo)
             | Unsubscribe(subscriber, subscribedTo) -> 
@@ -184,10 +184,10 @@ let subscribe(id:string,rndUserId:string, liveData:Dictionary<string,string list
 let unsubscribe(id:string, liveData:Dictionary<string,string list>) =
     // We will only unsubscribe if we have subscribed to someone already.
     // This will prevent us from getting in an infinite loop
-    if ((liveData.["subscribedTo"]).Length > 0)
+    if ((liveData.["mySubs"]).Length > 0)
     then 
-        let randomSubIndex = random.Next((liveData.["subscribedTo"].Length))
-        let randomSubUserId = liveData.["subscribedTo"].[randomSubIndex]
+        let randomSubIndex = random.Next((liveData.["mySubs"].Length))
+        let randomSubUserId = liveData.["mySubs"].[randomSubIndex]
         printfn "%s is unsubscribing from %s." id randomSubUserId    
         server <! Unsubscribe(id, randomSubUserId)
         removeFromList(randomSubUserId, liveData.["mySubs"]) |> ignore // remove local data
@@ -200,11 +200,11 @@ let client (id: string) = spawn system (string id) <| fun mailbox ->
     
     // store client-side data for "live delivery" as described in project description
     let liveData = new Dictionary<string, string list>()
-    liveData.Add("myTweets",[]) // stores local live data of all tweets of this user
-    liveData.Add("subscribedTo",[]) // stores local live data of any tweets from users im subscribed to
+    liveData.Add("myTweets",["my 1st tweet"]) // stores local live data of all tweets of this user
+    liveData.Add("subscribedTo",["my 1st tweet"]) // stores local live data of any tweets from users im subscribed to
     liveData.Add("hashTag",[]) // stores local live data of most recent query of tweets by hashtag
     liveData.Add("mentions",[]) // stores local live data of most recent query of tweets by mentions from a specific user (could be me)
-    liveData.Add("mySubs",[]) // stores local live data of user ids of who im subsribed to
+    liveData.Add("mySubs",[id]) // stores local live data of user ids of who im subsribed to
     let mutable connected = true
     let mutable myFollowers: string list  = []
     let rec loop() = actor {
@@ -299,7 +299,7 @@ let registerAccounts() =
         let name = i |> string
         registerAccount(name)
         
-    printfn "%i accounts created" numOfAccounts
+    printfn "%i accounts created" (numOfAccounts + 1)
         
 // will simulate users interacting with Twitter by sending messages to certain clients
 let simulator() = 
@@ -314,9 +314,9 @@ let simulator() =
 let main argv = 
     printfn "Welcome to Twitter Simulator, how many accounts would you like to create?"
     let inputLine = Console.ReadLine() 
-    numOfAccounts <- inputLine |> int // cast to int
+    numOfAccounts <- (inputLine |> int) - 1 // cast to int
     registerAccounts() // init some test accounts
-    simulator() // go through those accounts and start simulations for each
+    simulator() // go through those accounts a  nd start simulations for each
 
     // TODO: "You need to measure various aspects of your simulator and report performance"
     System.Console.ReadLine() |> ignore
