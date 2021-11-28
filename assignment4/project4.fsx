@@ -10,7 +10,7 @@ open System.Collections.Generic
 
 let system = ActorSystem.Create("FSharp")
 let random = Random()
-let mutable accountNum = 0
+let mutable numOfAccounts = 0
 type Message =
     | Tweeting of string * string list * string list // trigger client to tweet -> will be triggered by simulator
     | Tweet of string * string * string list * string list // send tweet to server 
@@ -287,15 +287,15 @@ let registerAccount accountName =
 
 // this is used for testing "Simulate as many users as you can"
 let registerAccounts() = 
-    for i in 0..accountNum do 
+    for i in 0..numOfAccounts do 
         let name = i |> string
         registerAccount(name)
         
-    printfn "%i accounts created" accountNum
+    printfn "%i accounts created" numOfAccounts
         
 // will simulate users interacting with Twitter by sending messages to certain clients
 let simulator() = 
-    for i in 0..accountNum do 
+    for i in 0..numOfAccounts do 
         let name = i |> string
         users.[name] <! Simulate // Added <! Simulate to enable disconnect and reconnect.
     
@@ -306,7 +306,7 @@ let simulator() =
 let main argv = 
     printfn "Welcome to Twitter Simulator, how many accounts would you like to create?"
     let inputLine = Console.ReadLine() 
-    let accountNum = inputLine |> int // cast to int
+    numOfAccounts <- inputLine |> int // cast to int
     registerAccounts() // init some test accounts
     simulator() // go through those accounts and start simulations for each
 
