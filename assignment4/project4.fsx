@@ -128,9 +128,6 @@ let server = spawn system (string id) <| fun mailbox ->
             | HashTagTweets(hashtags) -> 
                 let hashTweets = findTweets(hashtags, tweetsByHash)
                 sender <! (hashTweets,"hashTag")
-            // TODO: Your mentioned tweets does not have the right functionality
-            // Right now it just pulls all tweets that a user posted
-            // It does not pull all tweets that mention a user.
             | MentionedTweets(userId) -> 
                 let mentionedTweets = findTweets([userId],tweetsByMention)
                 sender <! ReceiveTweets(mentionedTweets,"mentions")
