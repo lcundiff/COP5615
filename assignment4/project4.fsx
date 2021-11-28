@@ -10,7 +10,7 @@ open System.Collections.Generic
 
 let system = ActorSystem.Create("FSharp")
 let random = Random()
-
+let mutable accountNum = 0
 type Message =
     | Tweeting of string * string list * string list // trigger client to tweet -> will be triggered by simulator
     | Tweet of string * string * string list * string list // send tweet to server 
@@ -30,7 +30,7 @@ type Message =
     | SubscribedToTweets
     | MyTweets
     | Success 
-    | Start
+    | Simulate
     | ToggleConnection of string * bool
 
 //let mutable clients = [] 
@@ -47,6 +47,11 @@ let usersSubscribers = new Dictionary<string, string list>()
 
 
 
+let createRndWord() = 
+    let rndCharCount = random.Next(0, 10)
+    let chars = Array.concat([[|'a' .. 'z'|];[|'A' .. 'Z'|];[|'0' .. '9'|]])
+    let sz = Array.length chars in
+    String(Array.init rndCharCount (fun _ -> chars.[random.Next sz]))
 
 let findTweets (keys:string list, DB:Dictionary<string, string list>) =
     let mutable tweets = []
@@ -163,45 +168,49 @@ let client (id: string) = spawn system (string id) <| fun mailbox ->
         let! msg = mailbox.Receive() 
         let sender = mailbox.Sender()
         match msg with
-            | Start -> system.Scheduler.Advanced.ScheduleRepeatedly (TimeSpan.FromMilliseconds(0.0), TimeSpan.FromMilliseconds(5000.0), fun () -> 
+            | Simulate -> system.Scheduler.Advanced.ScheduleRepeatedly (TimeSpan.FromMilliseconds(0.0), TimeSpan.FromMilliseconds(5000.0), fun () -> 
+
+                let randomNumber = random.Next(0, 60)
                 // Every second there is a chance to disconnect or reconnect.
                 // Currently it is 1/100 chance every second to disconnect, and 1/100 chance every second to reconnect.
-                let randomNumber = random.Next(0, 60)
+
                 if (not connected)
                 then 
-                    if (randomNumber <= 12) // 50 arbitrarily. 
+                    if (randomNumber <= 12) // 12 arbitrarily. 
                     then 
                         printfn "%s is re-connecting." id
                         connected <- true
-                        server <! ToggleConnection(id, connected)
-                        // if we connect, we should query as well.
+                        server <! ToggleConnection(id, connected) // if we connect, we should query as well.
                 else 
+                    let mutable randomUserId = random.Next((users.Count)) |> string // TODO: Just a random user -- can be changed
+                    while (not (users.ContainsKey(randomUserId))) do // is this neccessary? 
+                        randomUserId <- random.Next((users.Count)) |> string
                     // TWEET 
-                    // <= 10 send a tweet
                     if (randomNumber <= 10) 
                     then 
                         printfn "%s is tweeting." id
-                        let mutable randomUser = random.Next((users.Count)) // TODO: Just a random user -- can be changed
-                        while (not (users.ContainsKey(string randomUser))) do
-                            randomUser <- random.Next((users.Count))
-                        let tweet = "Some random tweet " + (string randomUser)
-                        let hashtag = "#Hashtag" + (string randomUser)
-                        let mention = "@" + (string (randomUser)) // assume users start from 0 and increment 
+
+                        let mutable tweet = "User: " + id + " tweeted"
+                        let hashtag = "#Hashtag" + (randomUserId)
+                        let mention = "@" + (randomUserId) // assume users start from 0 and increment 
+                        if(randomNumber <= 2) // 2/10 times its a retweet
+                        then
+                            let reTweet = tweet + " a retweet from user: " + randomUserId  // just modifying the tweet for retweeting
+                            tweet <- reTweet
+
                         server <! Tweet(tweet, id, [hashtag], [mention])
                     // SUBSCRIBER TO A USER
-                    // <= 20 subscribe to a user
                     else if (randomNumber <= 20)
                     then 
                         // We will only do a subscribe IF we haven't subscribed to everyone yet.
                         // This will prevent us from getting in an infinite loop.
-
                         if ((liveData.["subscribedTo"]).Length < users.Count) 
                         then     
-                            let mutable randomUser = random.Next((users.Count))
-                            while (List.contains (string randomUser) (liveData.["subscribedTo"])) do 
-                                randomUser <- random.Next((users.Count))
-                            printfn "%s is subscribing to %i." id randomUser    
-                            server <! Subscribe(id, string(randomUser))
+                            while (List.contains (randomUserId) (liveData.["subscribedTo"])) do // sub to someone new
+                                randomUserId <- random.Next((users.Count)) |> string
+                            printfn "%s is subscribing to %s." id randomUserId    
+                            server <! Subscribe(id, randomUserId)
+                            mySubs <- List.append mySubs [randomUserId] // update local data
                     // UNSUBSCRIBE
                     else if (randomNumber <= 30)
                     then 
@@ -209,24 +218,21 @@ let client (id: string) = spawn system (string id) <| fun mailbox ->
                         // This will prevent us from getting in an infinite loop
                         if ((liveData.["subscribedTo"]).Length > 0)
                         then 
-                            let mutable randomUser = random.Next((liveData.["subscribedTo"].Length))
-                            while (not (List.contains (string randomUser) (liveData.["subscribedTo"]))) do 
-                                randomUser <- random.Next((users.Count))
-                            printfn "%s is unsubscribing from %i." id randomUser    
-                            server <! Unsubscribe(id, string(randomUser))
-                    // SUBSCRIBED_TO_TWEETS
-                    // RETRIEVE TWEETS FROM USERS THAT THIS USER IS SUBSCRIBED TO.
+                            let randomSubIndex = random.Next((liveData.["subscribedTo"].Length))
+                            let randomSubUserId = liveData.["subscribedTo"].[randomSubIndex]
+                            printfn "%s is unsubscribing from %s." id randomSubUserId    
+                            server <! Unsubscribe(id, randomSubUserId)
+                            removeFromList(randomSubUserId, mySubs) |> ignore // remove local data
+                    // RETRIEVE SUBSCRIBED_TO_TWEETS: TWEETS FROM USERS THAT THIS USER IS SUBSCRIBED TO.
                     else if (randomNumber <= 40)
                     then
                         printfn "%s is requesting subscribed tweets." id    
                         server <! SubscribedTweets(mySubs)
-                    // HASHTAG TWEETS
+                    // RETRIEVE TWEETS FOR HASHTAG
                     else if (randomNumber <= 49)
                     then
-                        let mutable randomUser = random.Next((users.Count)) // TODO: Just a random user -- can be changed
-                        while (not (users.ContainsKey(string randomUser))) do
-                            randomUser <- random.Next((users.Count))
-                        let hashtag = "#Hashtag" + (string randomUser)
+                        let rndWord = createRndWord() 
+                        let hashtag = "#" + (rndWord) 
                         printfn "%s is requesting the hashtag: %s." id hashtag    
                         server <! HashTagTweets([hashtag])
                     // DISCONNECT
@@ -238,25 +244,9 @@ let client (id: string) = spawn system (string id) <| fun mailbox ->
                     // MENTIONS
                     else if (randomNumber <= 60)
                     then
-                        let mutable randomUser = random.Next((users.Count)) // TODO: Just a random user -- can be changed
-                        while (not (users.ContainsKey(string randomUser))) do
-                            randomUser <- random.Next((users.Count))
-                        let mention = string randomUser
-                        printfn "%s is requesting mentions of %s." id mention 
-                        server <! MentionedTweets(mention)
-                    // RETWEET
+                        printfn "%s is requesting mentions of %s." id randomUserId 
+                        server <! MentionedTweets(randomUserId)
                 )
-            | ReTweeting(tweet,hashtags,mentions,tweeter) ->
-                let reTweet = "retweet from user: " + tweeter + ": " + tweet // just modifying the tweet for retweeting
-                server <! Tweet(reTweet,id,hashtags,mentions) // do same as normal tweet but send the original author (tweeter)
-            | Subscribing(subscribedTo) -> // user clicked subscribe on a user (triggered by simulator)
-                //printfn("subscribing")
-                mySubs <- List.append mySubs [subscribedTo] 
-                server <! Subscribe(id,subscribedTo) 
-                sender <! Success // async needs this to continue
-            | Unsubscribing(subscribedTo) -> // simulator trigger unsubscribe
-                removeFromList(subscribedTo, mySubs) |> ignore
-                server <! Unsubscribe(id,subscribedTo)
             | AddFollower(subscriber) ->
                 myFollowers <- List.append myFollowers [subscriber] 
                 printfn "%s: followers now (after adding): %A" id myFollowers
@@ -270,7 +260,6 @@ let client (id: string) = spawn system (string id) <| fun mailbox ->
             | AddTweet(tweet,tweetType) -> // server telling us someone we subscribed to tweeted (can be used for live data)
                 //printfn("adding tweet: %s") tweet
                 printfn "%s received a new tweet: %s" id tweet
-
                 liveData.[tweetType] <- List.append liveData.[tweetType] [tweet] 
             | Success -> 
                 printfn "server message succeeded!"
@@ -287,26 +276,20 @@ let registerAccount accountName =
         usersSubscribers.Add(accountName, [])
 
 // this is used for testing "Simulate as many users as you can"
-let registerAccounts numAccounts = 
-    for i in 0..numAccounts do 
+let registerAccounts() = 
+    for i in 0..accountNum do 
         let name = i |> string
         registerAccount(name)
-        // Added <! Start to enable disconnect and reconnect.
-        users.[name] <! Start
-    printfn "%i accounts created" numAccounts
+        
+    printfn "%i accounts created" accountNum
         
 // will simulate users interacting with Twitter by sending messages to certain clients
 let simulator() = 
-    // user 0 subscribes to user 1
-    let subscribingRes = ( users.["0"] <? Subscribing("1") )
-    let subscribed = Async.RunSynchronously (subscribingRes, 1000)
+    for i in 0..accountNum do 
+        let name = i |> string
+        users.[name] <! Simulate // Added <! Simulate to enable disconnect and reconnect.
     
-    let tweeted = Async.RunSynchronously (users.["1"] <? Tweeting("yo",["#yo"],["@0"]), 1000)
-    
-    users.["0"] <! SubscribedToTweets // view tweets of who they follow
-
-    // TODO: "Simulate periods of live connection and disconnection for users"
-
+    //let tweeted = Async.RunSynchronously (users.["1"] <? Tweeting("yo",["#yo"],["@0"]), 1000)
     // TODO: "Simulate a Zipf distribution on the number of subscribers. For accounts with a lot of subscribers, increase the number of tweets. Make some of these messages re-tweets"
 
 [<EntryPoint>]
@@ -314,8 +297,8 @@ let main argv =
     printfn "Welcome to Twitter Simulator, how many accounts would you like to create?"
     let inputLine = Console.ReadLine() 
     let accountNum = inputLine |> int // cast to int
-    registerAccounts(accountNum) // init some test accounts
-    // simulator()
+    registerAccounts() // init some test accounts
+    simulator() // go through those accounts and start simulations for each
 
     // TODO: "You need to measure various aspects of your simulator and report performance"
     System.Console.ReadLine() |> ignore
