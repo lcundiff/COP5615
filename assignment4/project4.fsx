@@ -101,6 +101,9 @@ let server = spawn system (string id) <| fun mailbox ->
         // UserX should get a tweet if they are following UserY
         // the tweet is going to the user below? Also, if the user queries subscribedTo, they will get tweet from DB
         // below is just to update the client's live data
+        if (not (usersSubscribers.ContainsKey(id)))
+        then usersSubscribers.Add(id,[])
+        
         for user in usersSubscribers.[id] do 
             if (connectionStatus.[user] = true && users.ContainsKey(user))
             then users.[user] <! AddTweet(tweetMsg, "subscribedTo")
@@ -141,7 +144,7 @@ let server = spawn system (string id) <| fun mailbox ->
                 let rndTweet = tweetsByUser.[ogTweeterUserId].[0] // 0 is tmp
                 let reTweet = " " + tweet + " Retweet: " + ogTweeterUserId + ": " + rndTweet // just modifying the tweet for retweeting
                 publishTweet(reTweet,id,hashtags,mentions)
-            | _ -> 
+            | _ ->  
                 printfn "ERROR: server recieved unrecognized message"
 
 
@@ -310,7 +313,7 @@ let registerAccount accountName =
         let clientActor = client accountName
         users.Add(accountName,clientActor)
         connectionStatus.Add(accountName, true)
-        usersSubscribers.Add(accountName, [])
+        //usersSubscribers.Add(accountName, [])
 
 // this is used for testing "Simulate as many users as you can"
 let registerAccounts() = 
