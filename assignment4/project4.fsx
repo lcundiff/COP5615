@@ -12,23 +12,19 @@ let system = ActorSystem.Create("FSharp")
 let random = Random()
 let mutable numOfAccounts = 0
 type Message =
-    | Tweeting of string * string list * string list // trigger client to tweet -> will be triggered by simulator
     | Tweet of string * string * string list * string list // send tweet to server (tweet, id, hashtag list, mentions list)
-    | ReTweet of string * string * string // send tweet to server 
-    | ReTweeting of string * string list * string list * string // trigger client to retweet -> will be triggered by simulator
+    | ReTweet of string * string * string list * string list * string// send tweet to server 
     | SubscribedTweets of string list
     | HashTagTweets of string list // query for tweets with specific hashtag
     | MentionedTweets of string // query for tweets with specific user mentioned
     | ReceiveTweets of string list * string
     | AddTweet of string * string
-    | Subscribing of string // cause client/user to subscribe to passed in userid 
     | Subscribe of string * string // user ids of who subscribed to who
     | AddFollower of string
     | RemoveFollower of string
     | Unsubscribing of string
     | Unsubscribe of string * string
     | SubscribedToTweets
-    | MyTweets
     | Success 
     | Simulate
     | ToggleConnection of string * bool
@@ -37,13 +33,7 @@ type Message =
 let users = new Dictionary<string, IActorRef>()
 //connectionStatus is a dictionary of accountName and true/false depending on if theyre connected/not connected.
 let connectionStatus = new Dictionary<string, bool>()
-// These Dicts will act as our DB
-let tweetsByHash = new Dictionary<string, string list>()
-let tweetsByUser = new Dictionary<string, string list>()
-let tweetsByMention = new Dictionary<string, string list>()
 
-// All users subscribed to a user
-let usersSubscribers = new Dictionary<string, string list>()
 let _lock = Object()
 
 let mutable (zipfSubscribers: string list) = []
@@ -62,64 +52,72 @@ let findTweets (keys:string list, DB:Dictionary<string, string list>) =
         then tweets <- List.append tweets DB.[key]
     tweets
 
-let publishTweet (tweetMsg,id,hashtags,mentions) = 
-    let tweet = "user: " + id + " tweeted: " + tweetMsg
-
-    // add tweet to our "DB"
-    if tweetsByUser.ContainsKey(id)
-    then List.append tweetsByUser.[id] [tweet] |> ignore // append tweets to list
-    else tweetsByUser.Add(id,[tweet]) // init tweet list for this user
-
-    // add 
-    for hashtag in hashtags do
-        if tweetsByHash.ContainsKey(hashtag)
-        then List.append tweetsByHash.[hashtag] [tweet] |> ignore // append tweets to list
-        else tweetsByHash.Add(hashtag,[tweet]) // init tweet list for this hashtag 
-    
-    for mention in mentions do
-        if tweetsByMention.ContainsKey(mention)
-        then List.append tweetsByMention.[mention] [tweet] |> ignore // append tweets to list
-        else tweetsByMention.Add(mention,[tweet]) // init tweet list for this mention 
-    
-    // TODO:
-    // Shouldn't the tweet also go to the appropriate users? Its just being added to a list right now.
-    // UserX should get a tweet if they are following UserY
-    for user in usersSubscribers.[id] do 
-        if (connectionStatus.[user] = true && users.ContainsKey(user))
-        then users.[user] <! AddTweet(tweetMsg, "subscribedTo")
-
-let addFollower(subscriberId, subscribedToId) = 
-    if usersSubscribers.ContainsKey(subscribedToId)
-    then List.append usersSubscribers.[subscribedToId] [subscriberId] |> ignore // append subscribers to list
-    else usersSubscribers.Add(subscribedToId, [subscriberId]) // init subscriber list
-
-    users.[subscribedToId] <! AddFollower(subscriberId)
-
-// This is a helper function for removeFollower
-// It simply removes an item from a list.
-let rec remove_if l predicate =
-    match l with
-    | [] -> []
-    | x::rest -> 
-        if predicate(x) 
-        then
-            (remove_if rest predicate)
-        else x::(remove_if rest predicate)
-
-let removeFollower(subscriberId, subscribedToId) = 
-    // If the subscribed to item exists
-    // Remove the subscriber from that list.
-    if usersSubscribers.ContainsKey(subscribedToId)
-    then usersSubscribers.[subscribedToId] <- remove_if usersSubscribers.[subscribedToId] (fun x -> x = subscriberId) // untested.
-    users.[subscribedToId:string] <! RemoveFollower(subscriberId)
 
 let server = spawn system (string id) <| fun mailbox ->
+    // These Dicts will act as our DB
+    let tweetsByHash = new Dictionary<string, string list>()
+    let tweetsByUser = new Dictionary<string, string list>()
+    let tweetsByMention = new Dictionary<string, string list>()
+    // All users subscribed to a user
+    let usersSubscribers = new Dictionary<string, string list>()
+
+    // This is a helper function for removeFollower
+    // It simply removes an item from a list.
+    let rec remove_if l predicate =
+        match l with
+        | [] -> []
+        | x::rest -> 
+            if predicate(x) 
+            then
+                (remove_if rest predicate)
+            else x::(remove_if rest predicate)
+
+    let removeFollower(subscriberId, subscribedToId) = 
+        // If the subscribed to item exists
+        // Remove the subscriber from that list.
+        if usersSubscribers.ContainsKey(subscribedToId)
+        then usersSubscribers.[subscribedToId] <- remove_if usersSubscribers.[subscribedToId] (fun x -> x = subscriberId) // untested.
+        users.[subscribedToId:string] <! RemoveFollower(subscriberId)
+
+    let publishTweet (tweetMsg,id,hashtags,mentions) = 
+        let tweet = "user: " + id + " tweeted: " + tweetMsg
+
+        // add tweet to our "DB" - byUser, byHash and byMention
+        if tweetsByUser.ContainsKey(id)
+        then List.append tweetsByUser.[id] [tweet] |> ignore // append tweets to list
+        else tweetsByUser.Add(id,[tweet]) // init tweet list for this user
+
+        for hashtag in hashtags do
+            if tweetsByHash.ContainsKey(hashtag)
+            then List.append tweetsByHash.[hashtag] [tweet] |> ignore // append tweets to list
+            else tweetsByHash.Add(hashtag,[tweet]) // init tweet list for this hashtag 
+        
+        for mention in mentions do
+            if tweetsByMention.ContainsKey(mention)
+            then List.append tweetsByMention.[mention] [tweet] |> ignore // append tweets to list
+            else tweetsByMention.Add(mention,[tweet]) // init tweet list for this mention 
+        
+        // Shouldn't the tweet also go to the appropriate users? Its just being added to a list right now.
+        // UserX should get a tweet if they are following UserY
+        // the tweet is going to the user below? Also, if the user queries subscribedTo, they will get tweet from DB
+        // below is just to update the client's live data
+        for user in usersSubscribers.[id] do 
+            if (connectionStatus.[user] = true && users.ContainsKey(user))
+            then users.[user] <! AddTweet(tweetMsg, "subscribedTo")
+
+    let addFollower(subscriberId, subscribedToId) = 
+        if usersSubscribers.ContainsKey(subscribedToId)
+        then List.append usersSubscribers.[subscribedToId] [subscriberId] |> ignore // append subscribers to list
+        else usersSubscribers.Add(subscribedToId, [subscriberId]) // init subscriber list
+
+        users.[subscribedToId] <! AddFollower(subscriberId)
+
     let rec loop() = actor {
         let! msg = mailbox.Receive() 
         let sender = mailbox.Sender()
         match msg with
-            | Tweet(tweets, id, hashtags, mentions) ->
-                publishTweet(tweets,id,hashtags,mentions)
+            | Tweet(tweet, id, hashtags, mentions) ->
+                publishTweet(tweet,id,hashtags,mentions)
                 //sender <! Success // let client know we succeeded (idk if this is neccessary, but just adding it for now)
             | Subscribe(subscriber, subscribedTo) -> 
                 addFollower(subscriber, subscribedTo)
@@ -136,6 +134,13 @@ let server = spawn system (string id) <| fun mailbox ->
                 sender <! ReceiveTweets(mentionedTweets,"mentions")
             | ToggleConnection(id, status) ->
                 connectionStatus.[id] <- status
+            | ReTweet(tweet, id, hashtags, mentions,originalTweeter) -> 
+                let mutable ogTweeterUserId = originalTweeter
+                while (not (tweetsByUser.ContainsKey(ogTweeterUserId))) do
+                    ogTweeterUserId <- random.Next((numOfAccounts)) |> string 
+                let rndTweet = tweetsByUser.[ogTweeterUserId].[0] // 0 is tmp
+                let reTweet = " " + tweet + " Retweet: " + ogTweeterUserId + ": " + rndTweet // just modifying the tweet for retweeting
+                publishTweet(reTweet,id,hashtags,mentions)
             | _ -> 
                 printfn "ERROR: server recieved unrecognized message"
 
@@ -160,21 +165,19 @@ let tweet(id:string,rndUserId:string, liveData:Dictionary<string,string list>,rn
     let hashtag = "#" + createRndWord()
     let mention = (rndUserId) // assume users start from 0 and increment 
     let tweetMsg = createRndWord()
-    let mutable tweet = "User: " + id + " tweeted @"
+    let mutable tweet = "User: " + id + " tweeted @" + mention
+    tweet <- tweet + " " + hashtag
 
     if(rndNum <= 2) // 2/10 times its a retweet
     then
         printfn "%s is retweeting." id
         let mutable rndUserId2 = random.Next((numOfAccounts)) |> string 
-        while (not (tweetsByUser.ContainsKey(rndUserId2))) do
-            rndUserId2 <- random.Next((numOfAccounts)) |> string 
-        let rndTweet = tweetsByUser.[rndUserId2].[0] // 0 is tmp
-        let reTweet = tweet + " Retweet: " + rndUserId2 + ": " + rndTweet // just modifying the tweet for retweeting
-        tweet <- reTweet
-    else printfn "%s is tweeting." id
-    tweet <- tweet + " " + hashtag
-    server <! Tweet(tweet, id, [hashtag], [mention])
-    List.append liveData.["myTweets"] [tweet] 
+        server <! ReTweet(tweet, id, [hashtag], [mention],rndUserId2)
+        List.append liveData.["myTweets"] [tweet] 
+    else 
+        printfn "%s is tweeting." id
+        server <! Tweet(tweet, id, [hashtag], [mention])
+        List.append liveData.["myTweets"] [tweet] 
 
 let subscribe(id:string,rndUserId:string, liveData:Dictionary<string,string list>) = 
     // We will only do a subscribe IF we haven't subscribed to everyone yet.
@@ -232,7 +235,6 @@ let client (id: string) = spawn system (string id) <| fun mailbox ->
                 let randomNumber = random.Next(0, 60)
                 // Every second there is a chance to disconnect or reconnect.
                 // Currently it is 1/60 chance every second to disconnect, and 1/5 chance every second to reconnect.
-
                 if (not connected)
                 then 
                     if (randomNumber <= 12) // 12 arbitrarily. Gives a 20% chance to reconnect.
