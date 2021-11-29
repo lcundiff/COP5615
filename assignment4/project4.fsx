@@ -101,7 +101,9 @@ let server = spawn system (string id) <| fun mailbox ->
         // If the subscribed to item exists
         // Remove the subscriber from that list.
         if usersSubscribers.ContainsKey(subscribedToId)
-        then usersSubscribers.[subscribedToId] <- remove_if usersSubscribers.[subscribedToId] (fun x -> x = subscriberId) // untested.
+        then 
+            usersSubscribers.[subscribedToId] <- remove_if usersSubscribers.[subscribedToId] (fun x -> x = subscriberId) // untested.
+            zipfSubscribers <- List.append zipfSubscribers [subscriberId]
         users.[subscribedToId:string] <! RemoveFollower(subscriberId)
 
     let publishTweet (tweetMsg,id,hashtags,mentions) = 
@@ -258,14 +260,26 @@ let client (id: string) = spawn system (string id) <| fun mailbox ->
         let! msg = mailbox.Receive() 
         let sender = mailbox.Sender()
         match msg with
-            | Simulate -> system.Scheduler.Advanced.ScheduleRepeatedly (TimeSpan.FromMilliseconds(0.0), TimeSpan.FromMilliseconds(5000.0), fun () -> 
+            | Simulate -> system.Scheduler.Advanced.ScheduleRepeatedly (TimeSpan.FromMilliseconds(0.0), TimeSpan.FromMilliseconds(1000.0), fun () -> 
 
-                let randomNumber = random.Next(0, 60)
+                // ==== Cause Users with More Followers To Tweet More Often ====
+                let mutable divisor = float 0 
+                if (20 > numOfAccounts)
+                then divisor <- float 20 / float numOfAccounts
+                else divisor <- float numOfAccounts / float 20
+                
+                let increasedTweets = float myFollowers.Length / divisor
+                let tweetProbability = 10 + int increasedTweets
+                let randomMax = 60 + int increasedTweets
+                // ==============================================================
+
+                let randomNumber = random.Next(0, randomMax)
+                printfn "%s probability to tweet is : %d" id tweetProbability
                 // Every second there is a chance to disconnect or reconnect.
                 // Currently it is 1/60 chance every second to disconnect, and 1/5 chance every second to reconnect.
                 if (not connected)
                 then 
-                    if (randomNumber <= 12) // 12 arbitrarily. Gives a 20% chance to reconnect.
+                    if (randomNumber <= (randomMax / 5)) // Gives a 20% chance to reconnect.
                     then 
                         printfn "%s is re-connecting." id
                         connected <- true
@@ -276,39 +290,39 @@ let client (id: string) = spawn system (string id) <| fun mailbox ->
                     while (not (users.ContainsKey(randomUserId))) do // is this neccessary? 
                         randomUserId <- random.Next((numOfAccounts)) |> string
                     // TWEET 
-                    if (randomNumber <= 10) 
+                    if (randomNumber <= tweetProbability) 
                     then liveData.["myTweets"] <- tweet(id,randomUserId,liveData,randomNumber)
 
                     // SUBSCRIBER TO A USER
-                    else if (randomNumber <= 20)
+                    else if (randomNumber <= tweetProbability + 10)
                     then liveData.["mySubs"] <- subscribe(id,randomUserId,liveData)
                     // UNSUBSCRIBE
-                    else if (randomNumber <= 30)
+                    else if (randomNumber <= tweetProbability + 20)
                     then unsubscribe(id,liveData)
 
                     // RETRIEVE SUBSCRIBED_TO_TWEETS: TWEETS FROM USERS THAT THIS USER IS SUBSCRIBED TO.
-                    else if (randomNumber <= 40)
+                    else if (randomNumber <= tweetProbability + 30)
                     then
                         printfn "%s is requesting subscribed tweets." id    
                         server <! SubscribedTweets(liveData.["mySubs"])
                     // RETRIEVE TWEETS FOR HASHTAG
-                    else if (randomNumber <= 49)
+                    else if (randomNumber <= tweetProbability + 39)
                     then
                         let rndWord = createRndWord() 
                         let hashtag = "#" + (rndWord) 
                         printfn "%s is requesting the hashtag: %s." id hashtag    
                         server <! HashTagTweets([hashtag])
                     // RETRIEVE TWEETS FROM MENTIONS
-                    else if (randomNumber <= 60)
-                    then
-                        printfn "%s is requesting mentions of %s." id randomUserId 
-                        server <! MentionedTweets(randomUserId)
                     // DISCONNECT
-                    else if (randomNumber = 50) // Gives a 1/60 chance to disconnect.
+                    else if (randomNumber = tweetProbability + 40) // Gives a 1/60 chance to disconnect.
                     then 
                         printfn "%s is disconnecting." id   
                         connected <- false
                         server <! ToggleConnection(id, connected)
+                    else if (randomNumber <= tweetProbability + 50)
+                    then
+                        printfn "%s is requesting mentions of %s." id randomUserId 
+                        server <! MentionedTweets(randomUserId)
                 )
             | AddFollower(subscriber) ->
                 myFollowers <- List.append myFollowers [subscriber] 
