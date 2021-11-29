@@ -1,14 +1,21 @@
+#r "nuget: Akka"
+#r "nuget: Akka.FSharp"
+#r "nuget: Akka.Remote"
+#r "nuget: Akka.TestKit"
 open System
 open System.Security.Cryptography
-open System.Text;
+open System.Text
 open System.Diagnostics
-#r "nuget: Akka.FSharp" 
+open Akka.Actor
 open Akka.Configuration
 open Akka.FSharp
-open Akka.Actor
+
 open System.Collections.Generic
 
 let system = ActorSystem.Create("FSharp")
+let clientIp = "127.0.0.1"
+let serverIp = "127.0.0.1"
+let port = "4000"
 let random = Random()
 let mutable numOfAccounts = 0
 type Message =
@@ -22,13 +29,31 @@ type Message =
     | Subscribe of string * string // user ids of who subscribed to who
     | AddFollower of string
     | RemoveFollower of string
-    | Unsubscribing of string
     | Unsubscribe of string * string
     | SubscribedToTweets
     | Success 
     | Simulate
     | ToggleConnection of string * bool
 
+
+// Configuration
+let configuration = 
+    ConfigurationFactory.ParseString(
+        sprintf @"akka {            
+            stdout-loglevel : DEBUG
+            loglevel : ERROR
+            actor {
+                provider = ""Akka.Remote.RemoteActorRefProvider, Akka.Remote""
+            }
+            remote.helios.tcp {
+                transport-protocol = tcp
+                port = %s
+                hostname = %s
+            }
+    }" port clientIp)
+
+//let system = ActorSystem.Create("TwitterClient", configuration)
+//let reomoteServer = system.ActorSelection( sprintf "akka.tcp://TwitterServer@%s:8776/user/ServerActor" serverIp)
 //let mutable clients = [] 
 let users = new Dictionary<string, IActorRef>()
 //connectionStatus is a dictionary of accountName and true/false depending on if theyre connected/not connected.
@@ -337,7 +362,7 @@ let simulator() =
 let main argv = 
     printfn "Welcome to Twitter Simulator, how many accounts would you like to create?"
     let inputLine = Console.ReadLine() 
-    numOfAccounts <- (inputLine |> int) - 1 // cast to int
+    numOfAccounts <- (inputLine |> int) - 1 // cast to int      
     registerAccounts() // init some test accounts
     printfn "%i %A" zipfSubscribers.Length zipfSubscribers
     simulator() // go through those accounts and start simulations for each
