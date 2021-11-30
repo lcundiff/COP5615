@@ -149,17 +149,18 @@ let server = spawn system (string id) <| fun mailbox ->
             | Tweet(tweet, id, hashtags, mentions) ->
                 publishTweet(tweet,id,hashtags,mentions)
                 //sender <! Success // let client know we succeeded (idk if this is neccessary, but just adding it for now)
-            | Subscribe(subscriber, subscribedTo) -> 
+            | Subscribe(subscriber:string, subscribedTo:string) -> 
                 addFollower(subscriber, subscribedTo)
             | Unsubscribe(subscriber, subscribedTo) -> 
                 removeFollower(subscriber, subscribedTo)
-            | SubscribedTweets(subs) -> 
-                let subscribedTweets = findTweets(subs, tweetsByUser)
+            | SubscribedTweets(subs: string list) -> 
+                let subscribedTweets = findTweets(subs, tweetsByUser)   
+                printfn "sub tweets %A" subscribedTweets 
                 sender <! ReceiveTweets(subscribedTweets,"subscribedTo")
-            | HashTagTweets(hashtags) -> 
+            | HashTagTweets(hashtags: string list) -> 
                 let hashTweets = findTweets(hashtags, tweetsByHash)
-                sender <! (hashTweets,"hashTag")
-            | MentionedTweets(userId) -> 
+                sender <! ReceiveTweets(hashTweets,"hashTag")
+            | MentionedTweets(userId: string) -> 
                 let mentionedTweets = findTweets([userId],tweetsByMention)
                 sender <! ReceiveTweets(mentionedTweets,"mentions")
             | ToggleConnection(id, status) ->
@@ -330,7 +331,8 @@ let client (id: string) = spawn system (string id) <| fun mailbox ->
             | RemoveFollower(subscriber) ->
                 removeFromList(subscriber, myFollowers) |> ignore 
                 //printfn "%s: followers now (after removing): %A" id myFollowers
-            | ReceiveTweets(tweets,tweetType) ->
+            | ReceiveTweets(tweets:string list,tweetType:string) ->
+                printfn "recieved tweets %A" tweets 
                 liveData.[tweetType] <- tweets // replace client side data 
                 showTweets(tweets,tweetType)
             // Add tweet is for live loading data after its already been queried 
