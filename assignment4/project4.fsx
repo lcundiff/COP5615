@@ -221,11 +221,11 @@ let subscribe(id:string,rndUserId:string, liveData:Dictionary<string,string list
         then 
             let mutable randomSubscriberIndex = random.Next((zipfSubscribers.Length))
             let mutable index = 0 // Index is just a variable that ensures we don't get stuck in this loop forever.
-            while (zipfSubscribers.Length > 0 && List.contains zipfSubscribers.[randomSubscriberIndex] liveData.["mySubs"] && index < 100) do 
+            while (List.contains zipfSubscribers.[randomSubscriberIndex] liveData.["mySubs"] && index < 100) do 
                 randomSubscriberIndex <- random.Next((zipfSubscribers.Length))
                 index <- index + 1
             // Gets the id
-            printfn "index %i" randomSubscriberIndex
+            //printfn "index %i" randomSubscriberIndex
             rndNonSubUserId <- zipfSubscribers.[randomSubscriberIndex]
             // Removes index from list.
             zipfSubscribers <- removeAt randomSubscriberIndex zipfSubscribers
