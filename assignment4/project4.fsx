@@ -314,7 +314,7 @@ let client (id: string) = spawn system (string id) <| fun mailbox ->
                         server <! HashTagTweets([hashtag])
                     // RETRIEVE TWEETS FROM MENTIONS
                     // DISCONNECT
-                    else if (randomNumber = tweetProbability + 40) // Gives a 1/60 chance to disconnect.
+                    else if (randomNumber = tweetProbability + 40) // Gives a 1/60 - 1/80 chance to disconnect.
                     then 
                         printfn "%s is disconnecting." id   
                         connected <- false
