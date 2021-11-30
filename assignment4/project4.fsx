@@ -211,25 +211,26 @@ let tweet(id:string,rndUserId:string, liveData:Dictionary<string,string list>,rn
         List.append liveData.["myTweets"] [tweet] 
 
 let subscribe(id:string,rndUserId:string, liveData:Dictionary<string,string list>) = 
-    // We will only do a subscribe IF we haven't subscribed to everyone yet.
-    // This will prevent us from getting in an infinite loop. 
     let mutable rndNonSubUserId = rndUserId
-    // ZIPF Distribution
-    let mutable randomSubscriberIndex = random.Next((zipfSubscribers.Length))
-    let mutable index = 0 // Index is just a variable that ensures we don't get stuck in this loop forever.
-    while (zipfSubscribers.Length > 0 && List.contains zipfSubscribers.[randomSubscriberIndex] liveData.["mySubs"] && index < 100) do 
-        randomSubscriberIndex <- random.Next((zipfSubscribers.Length))
-        index <- index + 1
+    printfn "%s: in the subscribe method: mySubs %A" id (liveData.["mySubs"])
     lock _lock (fun () -> 
+        // We will only do a subscribe IF we haven't subscribed to everyone yet.
+        // This will prevent us from getting in an infinite loop. 
+        // ZIPF Distribution
+        let mutable randomSubscriberIndex = random.Next((zipfSubscribers.Length))
+        let mutable index = 0 // Index is just a variable that ensures we don't get stuck in this loop forever.
+        while (zipfSubscribers.Length > 0 && List.contains zipfSubscribers.[randomSubscriberIndex] liveData.["mySubs"] && index < 100) do 
+            randomSubscriberIndex <- random.Next((zipfSubscribers.Length))
+            index <- index + 1
         // Gets the id
         rndNonSubUserId <- zipfSubscribers.[randomSubscriberIndex]
         // Removes index from list.
         zipfSubscribers <- removeAt randomSubscriberIndex zipfSubscribers
-        printfn "zipfSubscribers: %A" zipfSubscribers
+        // printfn "zipfSubscribers: %A" zipfSubscribers
     )
-    printfn "%s is subscribing to %s." id rndUserId    
-    server <! Subscribe(id, rndUserId)
-    List.append liveData.["mySubs"] [rndUserId] // update local data
+    printfn "%s is subscribing to %s." id rndNonSubUserId    
+    server <! Subscribe(id, rndNonSubUserId)
+    List.append liveData.["mySubs"] [rndNonSubUserId] // update local data
 
 let unsubscribe(id:string, liveData:Dictionary<string,string list>) =
     // We will only unsubscribe if we have subscribed to someone already.
@@ -240,8 +241,9 @@ let unsubscribe(id:string, liveData:Dictionary<string,string list>) =
         let randomSubUserId = liveData.["mySubs"].[randomSubIndex]
         printfn "%s is unsubscribing from %s." id randomSubUserId    
         server <! Unsubscribe(id, randomSubUserId)
-        removeFromList(randomSubUserId, liveData.["mySubs"]) |> ignore // remove local data
-
+        lock _lock (fun () ->
+            removeFromList(randomSubUserId, liveData.["mySubs"]) |> ignore // remove local data
+        )
 
 let client (id: string) = spawn system (string id) <| fun mailbox ->
     
@@ -264,18 +266,15 @@ let client (id: string) = spawn system (string id) <| fun mailbox ->
             | Simulate -> system.Scheduler.Advanced.ScheduleRepeatedly (TimeSpan.FromMilliseconds(0.0), TimeSpan.FromMilliseconds(1000.0), fun () -> 
 
                 // ==== Cause Users with More Followers To Tweet More Often ====
-                let mutable divisor = float 0 
-                if (20 > numOfAccounts)
-                then divisor <- float 20 / float numOfAccounts
-                else divisor <- float numOfAccounts / float 20
-                
+                let mutable divisor = float numOfAccounts / float 20
+
                 let increasedTweets = float myFollowers.Length / divisor
                 let tweetProbability = 10 + int increasedTweets
                 let randomMax = 60 + int increasedTweets
                 // ==============================================================
 
                 let randomNumber = random.Next(0, randomMax)
-                printfn "%s probability to tweet is : %d" id tweetProbability
+                printfn "%s has %d followers, probability to tweet is : %d" id myFollowers.Length tweetProbability
                 // Every second there is a chance to disconnect or reconnect.
                 // Currently it is 1/60 chance every second to disconnect, and 1/5 chance every second to reconnect.
                 if (not connected)
@@ -327,12 +326,12 @@ let client (id: string) = spawn system (string id) <| fun mailbox ->
                 )
             | AddFollower(subscriber) ->
                 myFollowers <- List.append myFollowers [subscriber] 
-                //printfn "%s: followers now (after adding): %A" id myFollowers
+                printfn "User %s: followers now (after adding): %A" id myFollowers
             | RemoveFollower(subscriber) ->
                 removeFromList(subscriber, myFollowers) |> ignore 
-                //printfn "%s: followers now (after removing): %A" id myFollowers
+                printfn "%s: followers now (after removing): %A" id myFollowers
             | ReceiveTweets(tweets:string list,tweetType:string) ->
-                printfn "recieved tweets %A" tweets 
+                printfn "received tweets %A" tweets 
                 liveData.[tweetType] <- tweets // replace client side data 
                 showTweets(tweets,tweetType)
             // Add tweet is for live loading data after its already been queried 
@@ -358,12 +357,12 @@ let registerAccount accountName =
 
 // this is used for testing "Simulate as many users as you can"
 let registerAccounts() = 
-    for i in 0..numOfAccounts do 
+    for i in 0..numOfAccounts-1 do 
         let name = i |> string
         registerAccount(name)
-        let accountList = [for n in 0 .. (numOfAccounts/(i+1)) -> (string i)]
+        let accountList = [for n in 0 .. (numOfAccounts/(i+1))-1 -> (string i)]
         zipfSubscribers <- List.append zipfSubscribers accountList
-    printfn "%i accounts created" (numOfAccounts + 1)
+    printfn "%i accounts created" (numOfAccounts)
         
 // will simulate users interacting with Twitter by sending messages to certain clients
 let simulator() = 
@@ -378,7 +377,7 @@ let simulator() =
 let main argv = 
     printfn "Welcome to Twitter Simulator, how many accounts would you like to create?"
     let inputLine = Console.ReadLine() 
-    numOfAccounts <- (inputLine |> int) - 1 // cast to int      
+    numOfAccounts <- (inputLine |> int) // please leave this as (inputLine |> int) do not add a -1 to this or it will mess up my code. i adjusted everything else with -1  
     registerAccounts() // init some test accounts
     printfn "%i %A" zipfSubscribers.Length zipfSubscribers
     simulator() // go through those accounts and start simulations for each
