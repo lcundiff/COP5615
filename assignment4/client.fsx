@@ -12,8 +12,8 @@ open Akka.FSharp
 open System.Collections.Generic
 
 //let system = ActorSystem.Create("FSharp")
-let clientIp = "127.0.0.1"
-let serverIp = "127.0.0.1"
+let clientIp = "localhost"
+let serverIp = "localhost"
 let port = "4000"
 let random = Random()
 let mutable numOfAccounts = 0
@@ -39,8 +39,6 @@ type Message =
 let configuration = 
     ConfigurationFactory.ParseString(
         sprintf @"akka {            
-            stdout-loglevel : DEBUG
-            loglevel : ERROR
             actor {
                 provider = ""Akka.Remote.RemoteActorRefProvider, Akka.Remote""
             }
@@ -52,6 +50,8 @@ let configuration =
     }" port clientIp)
 
 let system = ActorSystem.Create("TwitterClient", configuration)
+printfn "Welcome to Twitter Simulator, how many accounts would you like to create?"
+let inputLine = Console.ReadLine() 
 let server = system.ActorSelection( sprintf "akka.tcp://TwitterServer@%s:8776/user/ServerActor" serverIp)
 //let mutable clients = [] 
 let users = new Dictionary<string, IActorRef>()
@@ -93,11 +93,11 @@ let tweet(id:string,rndUserId:string, liveData:Dictionary<string,string list>,rn
     then
         printfn "%s is retweeting." id
         let mutable rndUserId2 = random.Next((numOfAccounts)) |> string 
-        server <! ReTweet(tweet, id, [hashtag], [mention],rndUserId2)
+        server <! ("ReTweet",tweet, id, [hashtag], [mention],rndUserId2)
         List.append liveData.["myTweets"] [tweet] 
     else 
         printfn "%s is tweeting." id
-        server <! Tweet(tweet, id, [hashtag], [mention])
+        server <! ("Tweet", tweet, id, [hashtag], [mention],"")
         List.append liveData.["myTweets"] [tweet] 
 
 let subscribe(id:string,rndUserId:string, liveData:Dictionary<string,string list>,mailbox:Actor<_>) = 
@@ -122,7 +122,7 @@ let subscribe(id:string,rndUserId:string, liveData:Dictionary<string,string list
             // printfn "zipfSubscribers: %A" zipfSubscribers
     )
     printfn "%s is subscribing to %s." id rndNonSubUserId    
-    server.Tell(Subscribe(id, rndNonSubUserId), mailbox.Self)
+    server.Tell(("Subscribe", id, rndNonSubUserId,[""],[""],""), mailbox.Self)
     List.append liveData.["mySubs"] [rndNonSubUserId] // update local data
 
 let unsubscribe(id:string, liveData:Dictionary<string,string list>,mailbox:Actor<_>) =
@@ -133,7 +133,7 @@ let unsubscribe(id:string, liveData:Dictionary<string,string list>,mailbox:Actor
         let randomSubIndex = random.Next(1, (liveData.["mySubs"].Length))
         let randomSubUserId = liveData.["mySubs"].[randomSubIndex]
         printfn "%s is unsubscribing from %s." id randomSubUserId    
-        server.Tell(Unsubscribe(id, randomSubUserId), mailbox.Self)
+        server.Tell(("Unsubscribe",id, randomSubUserId), mailbox.Self)
         lock _lock (fun () ->
             removeFromList(randomSubUserId, liveData.["mySubs"]) |> ignore // remove local data
         )
@@ -169,7 +169,7 @@ let client (id: string) = spawn system (string id) <| fun mailbox ->
                 // ==============================================================
 
                 let randomNumber = random.Next(0, randomMax)
-                printfn "%s has %d followers, probability to tweet is : %d" id myFollowers.Length tweetProbability
+                //printfn "%s has %d followers, probability to tweet is : %d" id myFollowers.Length tweetProbability
                 // Every second there is a chance to disconnect or reconnect.
                 // Currently it is 1/60 chance every second to disconnect, and 1/5 chance every second to reconnect.
                 if (not connected)
@@ -178,7 +178,7 @@ let client (id: string) = spawn system (string id) <| fun mailbox ->
                     then 
                         printfn "%s is re-connecting." id
                         connected <- true
-                        server <! (ToggleConnection(id, connected), mailbox.Self) // if we connect, we should query as well. TODO: Logan?
+                        server <! (("ToggleConnection",id, connected), mailbox.Self) // if we connect, we should query as well. TODO: Logan?
                 else 
                     let mutable randomUserId = random.Next((numOfAccounts)) |> string // TODO: Just a random user -- can be changed
                     while (not (users.ContainsKey(randomUserId))) do // is this neccessary? 
@@ -198,29 +198,29 @@ let client (id: string) = spawn system (string id) <| fun mailbox ->
                     else if (randomNumber <= tweetProbability + 30)
                     then
                         printfn "%s is requesting subscribed tweets." id    
-                        server.Tell(SubscribedTweets(liveData.["mySubs"]), mailbox.Self)
+                        server.Tell(("SubscribedTweets","","",liveData.["mySubs"],[""],""), mailbox.Self)
                     // RETRIEVE TWEETS FOR HASHTAG
                     else if (randomNumber <= tweetProbability + 39)
                     then
                         let rndWord = createRndWord() 
                         let hashtag = "#" + (rndWord) 
                         printfn "%s is requesting the hashtag: %s." id hashtag    
-                        server.Tell(HashTagTweets([hashtag]), mailbox.Self)
+                        server.Tell(("HashTagTweets","","",[hashtag],[""],""), mailbox.Self)
                     // RETRIEVE TWEETS FROM MENTIONS
                     // DISCONNECT
                     else if (randomNumber = tweetProbability + 40) // Gives a 1/60 - 1/80 chance to disconnect.
                     then 
                         printfn "%s is disconnecting." id   
                         connected <- false
-                        server <! ToggleConnection(id, connected)
+                        server <! ("ToggleConnection", id, connected)
                     else if (randomNumber <= tweetProbability + 50)
                     then
                         printfn "%s is requesting mentions of %s." id randomUserId 
-                        server.Tell(MentionedTweets(randomUserId), mailbox.Self)
+                        server.Tell(("MentionedTweets",randomUserId), mailbox.Self)
                 )
             | AddFollower(subscriber) ->
                 myFollowers <- List.append myFollowers [subscriber] 
-                printfn "User %s: followers now (after adding): %A" id myFollowers
+                //printfn "User %s: followers now (after adding): %A" id myFollowers
             | RemoveFollower(subscriber) ->
                 removeFromList(subscriber, myFollowers) |> ignore 
                 printfn "%s: followers now (after removing): %A" id myFollowers
@@ -269,8 +269,7 @@ let simulator() =
 
 
 
-printfn "Welcome to Twitter Simulator, how many accounts would you like to create?"
-let inputLine = Console.ReadLine() 
+
 numOfAccounts <- (inputLine |> int) // please leave this as (inputLine |> int) do not add a -1 to this or it will mess up my code. i adjusted everything else with -1  
 registerAccounts() // init some test accounts
 printfn "%i zipfSubscribers: %A" zipfSubscribers.Length zipfSubscribers

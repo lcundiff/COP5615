@@ -12,7 +12,7 @@ open Akka.FSharp
 open System.Collections.Generic
 
 //let system = ActorSystem.Create("FSharp")
-let serverIp = "127.0.0.1"
+let serverIp = "localhost"
 let random = Random()
 let mutable numOfAccounts = 0
 type Message =
@@ -31,14 +31,13 @@ type Message =
     | Success 
     | Simulate
     | ToggleConnection of string * bool
+    | Start of DateTime
 
 
 // Configuration
 let configuration = 
     ConfigurationFactory.ParseString(
         sprintf @"akka {            
-            stdout-loglevel : DEBUG
-            loglevel : ERROR
             actor {
                 provider = ""Akka.Remote.RemoteActorRefProvider, Akka.Remote""
             }
@@ -50,7 +49,6 @@ let configuration =
         }" serverIp)
 
 let system = ActorSystem.Create("TwitterServer", configuration)
-//let reomoteServer = system.ActorSelection( sprintf "akka.tcp://TwitterServer@%s:8776/user/ServerActor" serverIp)
 //let mutable clients = [] 
 let users = new Dictionary<string, IActorRef>()
 //connectionStatus is a dictionary of accountName and true/false depending on if theyre connected/not connected.
@@ -75,14 +73,14 @@ let findTweets (keys:string list, DB:Dictionary<string, string list>) =
     tweets
 
 
-let server = spawn system "server" <| fun mailbox ->
+let ServerActor (mailbox:Actor<_>) =
     // These Dicts will act as our DB
     let tweetsByHash = new Dictionary<string, string list>()
     let tweetsByUser = new Dictionary<string, string list>()
     let tweetsByMention = new Dictionary<string, string list>()
     // All users subscribed to a user
     let usersSubscribers = new Dictionary<string, string list>()
-
+    let mutable serverStartTime = DateTime.Now 
     // This is a helper function for removeFollower
     // It simply removes an item from a list.
     let rec remove_if l predicate =
@@ -140,29 +138,45 @@ let server = spawn system "server" <| fun mailbox ->
         users.[subscribedToId] <! AddFollower(subscriberId)
 
     let rec loop() = actor {
-        let! msg = mailbox.Receive() 
+        let! (msg:obj) = mailbox.Receive() 
         let sender = mailbox.Sender()
-        //printfn "received message %A from %A" msg sender
-        match msg with
-            | Tweet(tweet, id, hashtags, mentions) ->
+        let (mtype,string1,string2,list1,list2,string3) : Tuple<string,string,string,string list,string list,string> = downcast msg
+        //let client = system.ActorSelection( sprintf "akka.tcp://TwitterClient@%s:8776/user/ServerActor" serverIp)
+        printfn "received message %A from %A" msg sender
+        match mtype with
+            | "Start" -> 
+                let (_,tweet, id, _, _,_) : Tuple<string,string,string,string list,string list,string> = downcast msg 
+                serverStartTime <- DateTime.Now
+            | "Tweet"-> 
+                let (_,tweet, id, hashtags, mentions,_) : Tuple<string,string,string,string list,string list,string> = downcast msg 
                 publishTweet(tweet,id,hashtags,mentions)
                 //sender <! Success // let client know we succeeded (idk if this is neccessary, but just adding it for now)
-            | Subscribe(subscriber:string, subscribedTo:string) -> 
+            | "Subscribe" -> 
+                let (_,subscriber, subscribedTo, _, _,_) : Tuple<string,string,string,string list,string list,string> = downcast msg 
                 addFollower(subscriber, subscribedTo)
-            | Unsubscribe(subscriber, subscribedTo) -> 
+            | "Unsubscribe" -> 
+                let (_,subscriber, subscribedTo, _, _,_) : Tuple<string,string,string,string list,string list,string> = downcast msg 
                 removeFollower(subscriber, subscribedTo)
-            | SubscribedTweets(subs: string list) -> 
+            | "SubscribedTweets" -> 
+                let (_,_, _, subs, _,_) : Tuple<string,string,string,string list,string list,string> = downcast msg 
                 let subscribedTweets = findTweets(subs, tweetsByUser)   
                 sender <! ReceiveTweets(subscribedTweets,"subscribedTo")
-            | HashTagTweets(hashtags: string list) -> 
+            | "HashTagTweets" -> 
+                let (_,_, _, hashtags, _,_) : Tuple<string,string,string,string list,string list,string> = downcast msg 
                 let hashTweets = findTweets(hashtags, tweetsByHash)
                 sender <! ReceiveTweets(hashTweets,"hashTag")
-            | MentionedTweets(userId: string) -> 
+            | "MentionedTweets" -> 
+                let (_,userId, _, _, _,_) : Tuple<string,string,string,string list,string list,string> = downcast msg 
                 let mentionedTweets = findTweets([userId],tweetsByMention)
                 sender <! ReceiveTweets(mentionedTweets,"mentions")
-            | ToggleConnection(id, status) ->
-                connectionStatus.[id] <- status
-            | ReTweet(tweet, id, hashtags, mentions,originalTweeter) -> 
+            | "ToggleConnection" ->
+                let (_,id, status, _, _,_) : Tuple<string,string,string,string list,string list,string> = downcast msg 
+                let mutable newStatus = false
+                if status = "true"
+                then newStatus <- true
+                connectionStatus.[id] <- newStatus
+            | "ReTweet"-> 
+                let (_,tweet, id, hashtags, mentions, originalTweeter) : Tuple<string,string,string,string list,string list,string> = downcast msg 
                 let mutable ogTweeterUserId = originalTweeter
                 while (not (tweetsByUser.ContainsKey(ogTweeterUserId))) do
                     ogTweeterUserId <- random.Next((numOfAccounts)) |> string 
@@ -189,6 +203,10 @@ let removeAt index list =
     list |> List.indexed |> List.filter (fun (i, _) -> i <> index) |> List.map snd
 
 
+let server = spawn system "ServerActor" ServerActor
+server <! ("Start","","",[""],[""],"")
+system.WhenTerminated.Wait()
 System.Console.ReadLine() |> ignore // return an integer exit code
 
-    
+    //'System.Tuple`6[System.String,System.String,System.String,Microsoft.FSharp.Collections.FSharpList`1[System.Object],Microsoft.FSharp.Collections.FSharpList`1[System.Object],System.String]'
+    //'System.Tuple`6[System.String,System.String,System.String,Microsoft.FSharp.Collections.FSharpList`1[System.String],Microsoft.FSharp.Collections.FSharpList`1[System.String],System.String]'.
