@@ -1,7 +1,6 @@
 #r "nuget: Akka"
 #r "nuget: Akka.FSharp"
 #r "nuget: Akka.Remote"
-#r "nuget: Akka.TestKit"
 open System
 open System.Security.Cryptography
 open System.Text
@@ -12,7 +11,7 @@ open Akka.FSharp
 
 open System.Collections.Generic
 
-let system = ActorSystem.Create("FSharp")
+//let system = ActorSystem.Create("FSharp")
 let clientIp = "127.0.0.1"
 let serverIp = "127.0.0.1"
 let port = "4000"
@@ -52,7 +51,7 @@ let configuration =
             }
     }" port clientIp)
 
-//let system = ActorSystem.Create("TwitterClient", configuration)
+let system = ActorSystem.Create("FSharp", configuration)
 //let reomoteServer = system.ActorSelection( sprintf "akka.tcp://TwitterServer@%s:8776/user/ServerActor" serverIp)
 //let mutable clients = [] 
 let users = new Dictionary<string, IActorRef>()
@@ -377,18 +376,17 @@ let simulator() =
     //let tweeted = Async.RunSynchronously (users.["1"] <? Tweeting("yo",["#yo"],["@0"]), 1000)
     // TODO: "Simulate a Zipf distribution on the number of subscribers. For accounts with a lot of subscribers, increase the number of tweets. Make some of these messages re-tweets"
 
-[<EntryPoint>]
-let main argv = 
-    printfn "Welcome to Twitter Simulator, how many accounts would you like to create?"
-    let inputLine = Console.ReadLine() 
-    numOfAccounts <- (inputLine |> int) // please leave this as (inputLine |> int) do not add a -1 to this or it will mess up my code. i adjusted everything else with -1  
-    registerAccounts() // init some test accounts
-    printfn "%i zipfSubscribers: %A" zipfSubscribers.Length zipfSubscribers
-    //users.["0"] <! ReceiveTweets(["yo"],"mentions")
-    simulator() // go through those accounts and start simulations for each
 
-    // TODO: "You need to measure various aspects of your simulator and report performance"
-    System.Console.ReadLine() |> ignore
-    0 // return an integer exit code
+
+printfn "Welcome to Twitter Simulator, how many accounts would you like to create?"
+let inputLine = Console.ReadLine() 
+numOfAccounts <- (inputLine |> int) // please leave this as (inputLine |> int) do not add a -1 to this or it will mess up my code. i adjusted everything else with -1  
+registerAccounts() // init some test accounts
+printfn "%i zipfSubscribers: %A" zipfSubscribers.Length zipfSubscribers
+//users.["0"] <! ReceiveTweets(["yo"],"mentions")
+simulator() // go through those accounts and start simulations for each
+
+// TODO: "You need to measure various aspects of your simulator and report performance"
+System.Console.ReadLine() |> ignore // return an integer exit code
 
     
