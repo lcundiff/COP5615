@@ -50,7 +50,7 @@ let configuration =
 
 let system = ActorSystem.Create("TwitterServer", configuration)
 //let mutable clients = [] 
-let users = new Dictionary<string, IActorRef>()
+let users = new Dictionary<string, ActorSelection>()
 //connectionStatus is a dictionary of accountName and true/false depending on if theyre connected/not connected.
 let connectionStatus = new Dictionary<string, bool>()
 
@@ -72,6 +72,19 @@ let findTweets (keys:string list, DB:Dictionary<string, string list>) =
         then tweets <- List.append tweets DB.[key]
     tweets
 
+// this can be called by simulator to register a new account, which will start up a new actor
+let registerAccount accountName = 
+        printfn "adding user %s" accountName
+        let client = system.ActorSelection ( sprintf "akka.tcp://TwitterClient@localhost:4000/user/%s" accountName)
+        users.Add(accountName,client)
+        connectionStatus.Add(accountName, true)
+
+// this is used for testing "Simulate as many users as you can"
+let registerClients(clients) = 
+    for i in clients do 
+        let name = i |> string
+        registerAccount(name)
+    //printfn "%i accounts created" (numOfAccounts)
 
 let ServerActor (mailbox:Actor<_>) =
     // These Dicts will act as our DB
@@ -99,7 +112,7 @@ let ServerActor (mailbox:Actor<_>) =
         then 
             usersSubscribers.[subscribedToId] <- remove_if usersSubscribers.[subscribedToId] (fun x -> x = subscriberId) // untested.
             zipfSubscribers <- List.append zipfSubscribers [subscriberId]
-        users.[subscribedToId:string] <! RemoveFollower(subscriberId)
+        users.[subscribedToId:string] <! ("RemoveFollower",subscriberId,[""],"")
 
     let publishTweet (tweetMsg,id,hashtags,mentions) = 
         let tweet = "user: " + id + " tweeted: " + tweetMsg
@@ -128,14 +141,14 @@ let ServerActor (mailbox:Actor<_>) =
         
         for user in usersSubscribers.[id] do 
             if (connectionStatus.[user] = true && users.ContainsKey(user))
-            then users.[user] <! AddTweet(tweetMsg, "subscribedTo")
+            then users.[user] <! ("AddTweet",tweetMsg, [""],"subscribedTo")
 
     let addFollower(subscriberId, subscribedToId) = 
         if usersSubscribers.ContainsKey(subscribedToId)
         then List.append usersSubscribers.[subscribedToId] [subscriberId] |> ignore // append subscribers to list
         else usersSubscribers.Add(subscribedToId, [subscriberId]) // init subscriber list
 
-        users.[subscribedToId] <! AddFollower(subscriberId)
+        users.[subscribedToId] <! ("AddFollower",subscriberId,[""],"")
 
     let rec loop() = actor {
         let! (msg:obj) = mailbox.Receive() 
@@ -160,15 +173,15 @@ let ServerActor (mailbox:Actor<_>) =
             | "SubscribedTweets" -> 
                 let (_,_, _, subs, _,_) : Tuple<string,string,string,string list,string list,string> = downcast msg 
                 let subscribedTweets = findTweets(subs, tweetsByUser)   
-                sender <! ReceiveTweets(subscribedTweets,"subscribedTo")
+                sender <! ("ReceiveTweets","subscribedTo",subscribedTweets,"")
             | "HashTagTweets" -> 
                 let (_,_, _, hashtags, _,_) : Tuple<string,string,string,string list,string list,string> = downcast msg 
                 let hashTweets = findTweets(hashtags, tweetsByHash)
-                sender <! ReceiveTweets(hashTweets,"hashTag")
+                sender <! ("ReceiveTweets","hashTag",hashTweets,"")
             | "MentionedTweets" -> 
                 let (_,userId, _, _, _,_) : Tuple<string,string,string,string list,string list,string> = downcast msg 
                 let mentionedTweets = findTweets([userId],tweetsByMention)
-                sender <! ReceiveTweets(mentionedTweets,"mentions")
+                sender <! ("ReceiveTweets","mentions",mentionedTweets,"")
             | "ToggleConnection" ->
                 let (_,id, status, _, _,_) : Tuple<string,string,string,string list,string list,string> = downcast msg 
                 let mutable newStatus = false
@@ -183,6 +196,9 @@ let ServerActor (mailbox:Actor<_>) =
                 let rndTweet = tweetsByUser.[ogTweeterUserId].[0] // 0 is tmp
                 let reTweet = " " + tweet + " Retweet: " + ogTweeterUserId + ": " + rndTweet // just modifying the tweet for retweeting
                 publishTweet(reTweet,id,hashtags,mentions)
+            | "RegisterClients" -> 
+                let (_,_, _, clientIds, _,_) : Tuple<string,string,string,string list,string list,string> = downcast msg 
+                registerClients(clientIds)
             | _ ->  
                 printfn "ERROR: server recieved unrecognized message"
 
