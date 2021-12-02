@@ -133,7 +133,7 @@ let unsubscribe(id:string, liveData:Dictionary<string,string list>,mailbox:Actor
         let randomSubIndex = random.Next(1, (liveData.["mySubs"].Length))
         let randomSubUserId = liveData.["mySubs"].[randomSubIndex]
         printfn "%s is unsubscribing from %s." id randomSubUserId    
-        server.Tell(("Unsubscribe",id, randomSubUserId,[""],[""],""), mailbox.Self)
+        server.Tell( ("Unsubscribe",id, randomSubUserId,[""],[""],""), mailbox.Self)
         lock _lock (fun () ->
             removeFromList(randomSubUserId, liveData.["mySubs"]) |> ignore // remove local data
         )
@@ -179,7 +179,7 @@ let client (id: string) = spawn system (string id) <| fun mailbox ->
                     then 
                         printfn "%s is re-connecting." id
                         connected <- true
-                        server <! (("ToggleConnection",id, "true",[""],[""],""), mailbox.Self) // if we connect, we should query as well. TODO: Logan?
+                        server <! ("ToggleConnection",id, "true",[""],[""],"") // if we connect, we should query as well. TODO: Logan?
                 else 
                     let mutable randomUserId = random.Next((numOfAccounts)) |> string // TODO: Just a random user -- can be changed
                     while (not (users.ContainsKey(randomUserId))) do // is this neccessary? 
@@ -201,14 +201,14 @@ let client (id: string) = spawn system (string id) <| fun mailbox ->
                         printfn "%s is requesting subscribed tweets." id    
                         let mutable subsList = [id]
                         subsList <- List.append liveData.["mySubs"] subsList
-                        server.Tell(("SubscribedTweets","","",subsList,[""],""), mailbox.Self)
+                        server.Tell( ("SubscribedTweets","","",subsList,[""],""), mailbox.Self)
                     // RETRIEVE TWEETS FOR HASHTAG
                     else if (randomNumber <= tweetProbability + 39)
                     then
                         let rndWord = createRndWord() 
                         let hashtag = "#" + (rndWord) 
                         printfn "%s is requesting the hashtag: %s." id hashtag    
-                        server.Tell(("HashTagTweets","","",[hashtag],[""],""), mailbox.Self)
+                        server.Tell( ("HashTagTweets","","",[hashtag],[""],""), mailbox.Self)
                     // RETRIEVE TWEETS FROM MENTIONS
                     // DISCONNECT
                     else if (randomNumber = tweetProbability + 40) // Gives a 1/60 - 1/80 chance to disconnect.
@@ -219,7 +219,7 @@ let client (id: string) = spawn system (string id) <| fun mailbox ->
                     else if (randomNumber <= tweetProbability + 50)
                     then
                         printfn "%s is requesting mentions of %s." id randomUserId 
-                        server.Tell(("MentionedTweets",randomUserId,"",[""],[""],""), mailbox.Self)
+                        server.Tell( ("MentionedTweets",randomUserId,"",[""],[""],""), mailbox.Self)
                 )
             | "AddFollower" ->
                 let (msgType,subscriber:string, list:string list, string2:string) : Tuple<string,string,string list,string> = downcast msg 
@@ -233,7 +233,7 @@ let client (id: string) = spawn system (string id) <| fun mailbox ->
                 let (msgType,tweetType:string, tweets:string list, string2:string) : Tuple<string,string,string list,string> = downcast msg
                 printfn "received tweets %A" tweets 
                 liveData.[tweetType] <- tweets // replace client side data 
-                showTweets(tweets,tweetType)
+                //showTweets(tweets,tweetType)
             // Add tweet is for live loading data after its already been queried 
             | "AddTweet" -> // server telling us someone we subscribed to tweeted (can be used for live data)
                 let (msgType,tweetType:string, list:string list , tweet:string) : Tuple<string,string,string list,string> = downcast msg
@@ -264,7 +264,7 @@ let registerAccounts() =
         let accountList = [for n in 0 .. (numOfAccounts/(i+1))-1 -> (string i)]
         zipfSubscribers <- List.append zipfSubscribers accountList
     printfn "adding clients"
-    server.Tell(("RegisterClients", "", "", clientIds,[""],""))
+    server <! ("RegisterClients", "", "", clientIds,[""],"")
     //printfn "%i accounts created" (numOfAccounts)
         
 // will simulate users interacting with Twitter by sending messages to certain clients
