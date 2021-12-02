@@ -6,6 +6,7 @@ open System
 open System.Security.Cryptography
 open System.Text
 open System.Diagnostics
+open System.IO
 open Akka.Actor
 open Akka.Configuration
 open Akka.FSharp
@@ -62,7 +63,11 @@ let connectionStatus = new Dictionary<string, bool>()
 let _lock = Object()
 
 let mutable (zipfSubscribers: string list) = []
-
+let mutable (items: (string * int) list) = []
+let mutable (finalCount: string list) = []
+let mutable (finalCountdown: (string * float) list) = []
+let timer = new System.Diagnostics.Stopwatch()
+timer.Start()
 
 let createRndWord() = 
     let rndCharCount = random.Next(0, 10) // word will be between 0-10 chars
@@ -84,7 +89,7 @@ let server = spawn system "server" <| fun mailbox ->
     let tweetsByUser = new Dictionary<string, string list>()
     let tweetsByMention = new Dictionary<string, string list>()
     // All users subscribed to a user
-    let usersSubscribers = new Dictionary<string, string list>()
+    let mutable usersSubscribers = new Dictionary<string, string list>()
 
     // This is a helper function for removeFollower
     // It simply removes an item from a list.
@@ -100,10 +105,10 @@ let server = spawn system "server" <| fun mailbox ->
     let removeFollower(subscriberId, subscribedToId) = 
         // If the subscribed to item exists
         // Remove the subscriber from that list.
-        if usersSubscribers.ContainsKey(subscribedToId)
-        then 
-            usersSubscribers.[subscribedToId] <- remove_if usersSubscribers.[subscribedToId] (fun x -> x = subscriberId) // untested.
-            zipfSubscribers <- List.append zipfSubscribers [subscriberId]
+        // if usersSubscribers.ContainsKey(subscribedToId)
+        // then 
+        //     usersSubscribers.[subscribedToId] <- remove_if usersSubscribers.[subscribedToId] (fun x -> x = subscriberId) // untested.
+        //     zipfSubscribers <- List.append zipfSubscribers [subscriberId]
         users.[subscribedToId:string] <! RemoveFollower(subscriberId)
 
     let publishTweet (tweetMsg,id,hashtags,mentions) = 
@@ -136,9 +141,9 @@ let server = spawn system "server" <| fun mailbox ->
             then users.[user] <! AddTweet(tweetMsg, "subscribedTo")
 
     let addFollower(subscriberId, subscribedToId) = 
-        if usersSubscribers.ContainsKey(subscribedToId)
-        then List.append usersSubscribers.[subscribedToId] [subscriberId] |> ignore // append subscribers to list
-        else usersSubscribers.Add(subscribedToId, [subscriberId]) // init subscriber list
+        // if usersSubscribers.ContainsKey(subscribedToId)
+        // then usersSubscribers.[subscribedToId] <- List.append usersSubscribers.[subscribedToId] [subscriberId] // append subscribers to list
+        // else usersSubscribers.Add(subscribedToId, [subscriberId]) // init subscriber list
 
         users.[subscribedToId] <! AddFollower(subscriberId)
 
@@ -149,7 +154,7 @@ let server = spawn system "server" <| fun mailbox ->
         match msg with
             | Tweet(tweet, id, hashtags, mentions) ->
                 publishTweet(tweet,id,hashtags,mentions)
-                //sender <! Success // let client know we succeeded (idk if this is neccessary, but just adding it for now)
+                sender <! Success // let client know we succeeded (idk if this is neccessary, but just adding it for now)
             | Subscribe(subscriber:string, subscribedTo:string) -> 
                 addFollower(subscriber, subscribedTo)
             | Unsubscribe(subscriber, subscribedTo) -> 
@@ -201,58 +206,65 @@ let tweet(id:string,rndUserId:string, liveData:Dictionary<string,string list>,rn
 
     if(rndNum <= 2) // 2/10 times its a retweet
     then
-        printfn "%s is retweeting." id
+        // printfn "%s is retweeting." id
         let mutable rndUserId2 = random.Next((numOfAccounts)) |> string 
         server <! ReTweet(tweet, id, [hashtag], [mention],rndUserId2)
         List.append liveData.["myTweets"] [tweet] 
     else 
-        printfn "%s is tweeting." id
+        // printfn "%s is tweeting." id
         server <! Tweet(tweet, id, [hashtag], [mention])
         List.append liveData.["myTweets"] [tweet] 
 
-let subscribe(id:string,rndUserId:string, liveData:Dictionary<string,string list>,mailbox:Actor<_>) = 
+let subscribe(id:string,rndUserId:string, liveData:Dictionary<string,string list>,mailbox:Actor<_>, whoCanISubscribeTo:string list) = 
     let mutable rndNonSubUserId = rndUserId
-    printfn "%s: in the subscribe method: mySubs %A" id (liveData.["mySubs"])
+    // printfn "%s: in the subscribe method: mySubs %A" id (liveData.["mySubs"])
+    let mutable listToAppend = -1
     lock _lock (fun () -> 
         // We will only do a subscribe IF we haven't subscribed to everyone yet.
         // This will prevent us from getting in an infinite loop. 
+
+        let mutable index = 0 // Index is just a variable that ensures we don't get stuck in this loop forever.
+        let mutable randomSubscriberIndex = random.Next((whoCanISubscribeTo.Length))
         // ZIPF Distribution
-        if(zipfSubscribers.Length > 0 )
+        if(whoCanISubscribeTo.Length > 0 )
         then 
-            let mutable randomSubscriberIndex = random.Next((zipfSubscribers.Length))
-            let mutable index = 0 // Index is just a variable that ensures we don't get stuck in this loop forever.
-            while (List.contains zipfSubscribers.[randomSubscriberIndex] liveData.["mySubs"] && index < 100) do 
-                randomSubscriberIndex <- random.Next((zipfSubscribers.Length))
+            // Find someone youre not subbed to
+            while (List.contains whoCanISubscribeTo.[randomSubscriberIndex] liveData.["mySubs"] && index < 100) do 
+                randomSubscriberIndex <- random.Next((whoCanISubscribeTo.Length))
                 index <- index + 1
-            // Gets the id
-            //printfn "index %i" randomSubscriberIndex
-            rndNonSubUserId <- zipfSubscribers.[randomSubscriberIndex]
-            // Removes index from list.
-            zipfSubscribers <- removeAt randomSubscriberIndex zipfSubscribers
-            // printfn "zipfSubscribers: %A" zipfSubscribers
+                // Gets the id
+                rndNonSubUserId <- whoCanISubscribeTo.[randomSubscriberIndex]
+                
+            if (index < 100)
+            then 
+                // Removes index from list.
+                // REPLACED zipfSubscribers <- removeAt randomSubscriberIndex zipfSubscribers
+                // printfn "%s is subscribing to %s." id rndNonSubUserId
+                server.Tell(Subscribe(id, rndNonSubUserId), mailbox.Self)
+                listToAppend <- randomSubscriberIndex
     )
-    printfn "%s is subscribing to %s." id rndNonSubUserId    
-    server.Tell(Subscribe(id, rndNonSubUserId), mailbox.Self)
-    List.append liveData.["mySubs"] [rndNonSubUserId] // update local data
+    // Put nothing in if youre maxed out.
+    listToAppend
 
 let unsubscribe(id:string, liveData:Dictionary<string,string list>,mailbox:Actor<_>) =
     // We will only unsubscribe if we have subscribed to someone already.
     // This will prevent us from getting in an infinite loop
-    if ((liveData.["mySubs"]).Length > 1)
-    then 
-        let randomSubIndex = random.Next(1, (liveData.["mySubs"].Length))
-        let randomSubUserId = liveData.["mySubs"].[randomSubIndex]
-        printfn "%s is unsubscribing from %s." id randomSubUserId    
-        server.Tell(Unsubscribe(id, randomSubUserId), mailbox.Self)
-        lock _lock (fun () ->
-            removeFromList(randomSubUserId, liveData.["mySubs"]) |> ignore // remove local data
-        )
+    let mutable randomSubIndex = -1
+    lock _lock (fun () -> 
+        if ((liveData.["mySubs"]).Length > 1)
+        then 
+            randomSubIndex <- random.Next(1, (liveData.["mySubs"].Length))
+            let randomSubUserId = liveData.["mySubs"].[randomSubIndex]
+            // printfn "%s is unsubscribing from %s." id randomSubUserId    
+            server.Tell(Unsubscribe(id, randomSubUserId), mailbox.Self)
+    )
+    randomSubIndex
 
-let client (id: string) = spawn system (string id) <| fun mailbox ->
+let client (id: string) (listOfPeopleToSubTo: string list) = spawn system (string id) <| fun mailbox ->
     
     let showTweets (tweets:string list, tweetType:string) = 
-        printfn "%s tweets %A" tweetType tweets |> ignore // placeholder
-    
+        // printfn "%s tweets %A" tweetType tweets |> ignore // placeholder
+        0
     // store client-side data for "live delivery" as described in project description
     let liveData = new Dictionary<string, string list>()
     liveData.Add("myTweets",[]) // stores local live data of all tweets of this user
@@ -262,89 +274,207 @@ let client (id: string) = spawn system (string id) <| fun mailbox ->
     liveData.Add("mySubs",[]) // stores local live data of user ids of who im subsribed to
     let mutable connected = true
     let mutable myFollowers: string list  = []
+    let mutable loops = 0 
+    let mutable con = true
+    let mutable whoCanISubscribeTo = listOfPeopleToSubTo
+    let mutable averageTimes = []
     let rec loop() = actor {
         let! msg = mailbox.Receive() 
         let sender = mailbox.Sender()
         match msg with
             | Simulate ->   
-                system.Scheduler.Advanced.ScheduleRepeatedly (TimeSpan.FromMilliseconds(0.0), TimeSpan.FromMilliseconds(1000.0), fun () -> 
-                printfn "mailbox2 %A" mailbox.Self
+                system.Scheduler.Advanced.ScheduleRepeatedly (TimeSpan.FromMilliseconds(0.0), TimeSpan.FromMilliseconds(100.0), fun () -> 
+                // printfn "mailbox2 %A" mailbox.Self
 
-                // ==== Cause Users with More Followers To Tweet More Often ====
-                let mutable divisor = float numOfAccounts / float 20
-
-                let increasedTweets = float myFollowers.Length / divisor
-                let tweetProbability = 10 + int increasedTweets
-                let randomMax = 60 + int increasedTweets
-                // ==============================================================
-
-                let randomNumber = random.Next(0, randomMax)
-                printfn "%s has %d followers, probability to tweet is : %d" id myFollowers.Length tweetProbability
-                // Every second there is a chance to disconnect or reconnect.
-                // Currently it is 1/60 chance every second to disconnect, and 1/5 chance every second to reconnect.
-                if (not connected)
+                if (loops > 300 && con)
                 then 
-                    if (randomNumber <= (randomMax / 5)) // Gives a 20% chance to reconnect.
-                    then 
-                        printfn "%s is re-connecting." id
-                        connected <- true
-                        server <! (ToggleConnection(id, connected), mailbox.Self) // if we connect, we should query as well. TODO: Logan?
-                else 
-                    let mutable randomUserId = random.Next((numOfAccounts)) |> string // TODO: Just a random user -- can be changed
-                    while (not (users.ContainsKey(randomUserId))) do // is this neccessary? 
-                        randomUserId <- random.Next((numOfAccounts)) |> string
-                    // TWEET 
-                    if (randomNumber <= tweetProbability) 
-                    then liveData.["myTweets"] <- tweet(id,randomUserId,liveData,randomNumber)
+                    lock _lock (fun () ->
+                        // let newResult = "Actor " + id + ": I have " + (string myFollowers.Length) + " followers and " + (string liveData.["myTweets"].Length) + " tweets."
+                        // use streamWriter = new StreamWriter("Results.txt", true)
+                        // streamWriter.WriteLine(newResult)
+                        con <- false
+                        items <- List.append items [(id, myFollowers.Length)]
+                        for item in liveData.["mySubs"] do 
+                            finalCount <- List.append finalCount [item]
+                        let mutable index = 0
+                        let mutable finalString = ""
+                        let mutable finalTimes = []
+                        for times in averageTimes do 
+                            if (index % 2 = 1)
+                            then 
+                                finalTimes <- List.append finalTimes [averageTimes.[index] - averageTimes.[index - 1]]
+                                finalString <- finalString + (string (averageTimes.[index] - averageTimes.[index - 1])) + ","
+                            index <- index + 1
 
-                    // SUBSCRIBER TO A USER
-                    else if (randomNumber <= tweetProbability + 10)
-                    then liveData.["mySubs"] <- subscribe(id,randomUserId,liveData,mailbox)
-                    // UNSUBSCRIBE
-                    else if (randomNumber <= tweetProbability + 20)
-                    then unsubscribe(id,liveData,mailbox)
+                        let mutable sum = 0
+                        for times in finalTimes do
+                            sum <- sum + (int times)
+                        let average = (float sum) / (float finalTimes.Length)
+                        finalCountdown <- List.append finalCountdown [(id, average)]
 
-                    // RETRIEVE SUBSCRIBED_TO_TWEETS: TWEETS FROM USERS THAT THIS USER IS SUBSCRIBED TO.
-                    else if (randomNumber <= tweetProbability + 30)
-                    then
-                        printfn "%s is requesting subscribed tweets." id    
-                        server.Tell(SubscribedTweets(liveData.["mySubs"]), mailbox.Self)
-                    // RETRIEVE TWEETS FOR HASHTAG
-                    else if (randomNumber <= tweetProbability + 39)
-                    then
-                        let rndWord = createRndWord() 
-                        let hashtag = "#" + (rndWord) 
-                        printfn "%s is requesting the hashtag: %s." id hashtag    
-                        server.Tell(HashTagTweets([hashtag]), mailbox.Self)
-                    // RETRIEVE TWEETS FROM MENTIONS
-                    // DISCONNECT
-                    else if (randomNumber = tweetProbability + 40) // Gives a 1/60 - 1/80 chance to disconnect.
+                        if (items.Length >= numOfAccounts) 
+                        then 
+                            let mutable x = ""
+                            let mutable y = ""
+                            items <- List.sortBy (fun (x, _) -> (int x)) items
+                            for item in items do 
+                                x <- x + (fst(item)) + ","
+                                y <- y + (string (snd(item))) + ","
+                            use streamWriter = new StreamWriter("Results.csv", true)
+                            streamWriter.WriteLine(x)
+                            streamWriter.WriteLine(y)
+                            let mutable z = ""
+
+
+                            let mutable (finalArray: (string * int) list) = []
+                            for i in 0 .. numOfAccounts - 1 do 
+                                let mutable counter = 0
+                                for item in finalCount do 
+                                    if ((string i) = item) 
+                                    then counter <- counter + 1
+                                finalArray <- List.append finalArray [((string i), counter)]
+                               
+                            x <- ""
+                            y <- ""
+                            // COUNT SUBS
+                            finalArray <- List.sortBy (fun (x, _) -> (int x)) finalArray
+                            for item in finalArray do
+                                x <- x + (fst(item)) + ","
+                                y <- y + (string (snd(item))) + ","
+                            streamWriter.WriteLine("FOLLOWERS")
+                            streamWriter.WriteLine(x)
+                            streamWriter.WriteLine(y)
+                            for pok in zipfSubscribers do 
+                                z <- z + pok + " "
+                            streamWriter.WriteLine(z)
+
+                            // Count timers
+                            x <- ""
+                            y <- ""
+                            let mutable finalSum = float 0
+                            finalCountdown <- List.sortBy (fun (x, _) -> (int x)) finalCountdown
+                            for item in finalCountdown do
+                                x <- x + (fst(item)) + ","
+                                y <- y + (string (snd(item))) + ","
+                                finalSum <- finalSum + (snd(item))
+                            let finalAverage = finalSum / (float finalCountdown.Length)
+                            streamWriter.WriteLine("TIMERS")
+                            streamWriter.WriteLine(x)
+                            streamWriter.WriteLine(y)
+                            streamWriter.WriteLine("FINAL AVERAGE")
+                            streamWriter.WriteLine(finalAverage)
+                            streamWriter.WriteLine("")
+                            streamWriter.WriteLine("100000")
+
+                           
+                    )
+                loops <- loops + 1
+                if (con)
+                then
+                    // ==== Cause Users with More Followers To Tweet More Often ====
+                    let mutable divisor = float numOfAccounts / float 20
+
+                    let increasedTweets = float myFollowers.Length / divisor
+                    let tweetProbability = 10 + int increasedTweets
+                    let randomMax = 60 + int increasedTweets
+                    // ==============================================================
+
+                    let randomNumber = random.Next(0, randomMax)
+                    lock _lock (fun () ->
+                        let newResult = "Actor " + id + " has " + (string myFollowers.Length) + " followers, probability to tweet is: " + (string tweetProbability)
+                        use streamWriter = new StreamWriter("Logger.txt", true)
+                        streamWriter.WriteLine(newResult)
+                        // printfn "%s has %d followers, probability to tweet is : %d" id myFollowers.Length tweetProbability
+                    )
+                    // Every second there is a chance to disconnect or reconnect.
+                    // Currently it is 1/60 chance every second to disconnect, and 1/5 chance every second to reconnect.
+                    if (not connected)
                     then 
-                        printfn "%s is disconnecting." id   
-                        connected <- false
-                        server <! ToggleConnection(id, connected)
-                    else if (randomNumber <= tweetProbability + 50)
-                    then
-                        printfn "%s is requesting mentions of %s." id randomUserId 
-                        server.Tell(MentionedTweets(randomUserId), mailbox.Self)
+                        if (randomNumber <= (randomMax / 5)) // Gives a 20% chance to reconnect.
+                        then 
+                            // printfn "%s is re-connecting." id
+                            connected <- true
+                            server <! (ToggleConnection(id, connected), mailbox.Self) // if we connect, we should query as well. TODO: Logan?
+                    else 
+                        let mutable randomUserId = random.Next((numOfAccounts)) |> string // TODO: Just a random user -- can be changed
+                        while (not (users.ContainsKey(randomUserId))) do // is this neccessary? 
+                            randomUserId <- random.Next((numOfAccounts)) |> string
+                        // TWEET 
+                        if (randomNumber <= tweetProbability) 
+                        then 
+                            averageTimes <- List.append averageTimes [timer.ElapsedMilliseconds]
+                            liveData.["myTweets"] <- tweet(id,randomUserId,liveData,randomNumber)
+
+                        // SUBSCRIBER TO A USER
+                        else if (randomNumber <= tweetProbability + 15)
+                        then 
+                            let x = ((subscribe(id,randomUserId,liveData,mailbox, whoCanISubscribeTo)))
+                            if (not (x = -1))
+                            then
+                                liveData.["mySubs"] <- List.append liveData.["mySubs"] [whoCanISubscribeTo.[x]]
+                                whoCanISubscribeTo <- removeAt x whoCanISubscribeTo
+                        
+                        // liveData.["mySubs"] <- subscribe(id,randomUserId,liveData,mailbox, whoCanISubscribeTo)
+                        // UNSUBSCRIBE
+                        else if (randomNumber <= tweetProbability + 20)
+                        then 
+                            let x = unsubscribe(id,liveData,mailbox)
+                            if (not (x = -1))
+                            then
+                                whoCanISubscribeTo <- List.append whoCanISubscribeTo [liveData.["mySubs"].[x]]
+                                liveData.["mySubs"] <- removeAt x liveData.["mySubs"]
+
+                        // RETRIEVE SUBSCRIBED_TO_TWEETS: TWEETS FROM USERS THAT THIS USER IS SUBSCRIBED TO.
+                        else if (randomNumber <= tweetProbability + 30)
+                        then
+                            // printfn "%s is requesting subscribed tweets." id    
+                            server.Tell(SubscribedTweets(liveData.["mySubs"]), mailbox.Self)
+                        // RETRIEVE TWEETS FOR HASHTAG
+                        else if (randomNumber <= tweetProbability + 39)
+                        then
+                            let rndWord = createRndWord() 
+                            let hashtag = "#" + (rndWord) 
+                            // printfn "%s is requesting the hashtag: %s." id hashtag    
+                            server.Tell(HashTagTweets([hashtag]), mailbox.Self)
+                        // RETRIEVE TWEETS FROM MENTIONS
+                        // DISCONNECT
+                        else if (randomNumber = tweetProbability + 40) // Gives a 1/60 - 1/80 chance to disconnect.
+                        then 
+                            // printfn "%s is disconnecting." id   
+                            connected <- false
+                            server <! ToggleConnection(id, connected)
+                        else if (randomNumber <= tweetProbability + 50)
+                        then
+                            // printfn "%s is requesting mentions of %s." id randomUserId 
+                            server.Tell(MentionedTweets(randomUserId), mailbox.Self)
                 )
             | AddFollower(subscriber) ->
-                myFollowers <- List.append myFollowers [subscriber] 
-                printfn "User %s: followers now (after adding): %A" id myFollowers
+                myFollowers <- List.append myFollowers [subscriber]
+                lock _lock (fun () ->
+
+                    let newResult = "Actor " + id + ": I have " + (string myFollowers.Length) + " followers and " + (string liveData.["myTweets"].Length) + " tweets."
+                    use streamWriter = new StreamWriter("Results.txt", true)
+                    streamWriter.WriteLine(newResult)
+                )
+                // printfn "User %s: followers now (after adding): %A" id myFollowers
             | RemoveFollower(subscriber) ->
-                removeFromList(subscriber, myFollowers) |> ignore 
-                printfn "%s: followers now (after removing): %A" id myFollowers
+                if (List.contains subscriber myFollowers)
+                then
+                    myFollowers <- removeFromList(subscriber, myFollowers)
+                    zipfSubscribers <- List.append zipfSubscribers [subscriber]
+                    // printfn "%s: followers now (after removing): %A" id myFollowers
             | ReceiveTweets(tweets:string list,tweetType:string) ->
-                printfn "received tweets %A" tweets 
+                // printfn "received tweets %A" tweets 
                 liveData.[tweetType] <- tweets // replace client side data 
                 showTweets(tweets,tweetType)
             // Add tweet is for live loading data after its already been queried 
             | AddTweet(tweet,tweetType) -> // server telling us someone we subscribed to tweeted (can be used for live data)
                 //printfn("adding tweet: %s") tweet
-                printfn "%s received a new tweet: %s" id tweet
+                // printfn "%s received a new tweet: %s" id tweet
                 liveData.[tweetType] <- List.append liveData.[tweetType] [tweet] 
             | Success -> 
-                printfn "server message succeeded!"
+                averageTimes <- List.append averageTimes [timer.ElapsedMilliseconds]
+                // printfn "server message succeeded!"
             | _ -> 
                 printfn "ERROR: client recieved unrecognized message"
 
@@ -353,8 +483,8 @@ let client (id: string) = spawn system (string id) <| fun mailbox ->
     loop()  
 
 // this can be called by simulator to register a new account, which will start up a new actor
-let registerAccount accountName = 
-        let clientActor = client accountName
+let registerAccount(accountName, theList) = 
+        let clientActor = client accountName theList
         users.Add(accountName,clientActor)
         connectionStatus.Add(accountName, true)
         //usersSubscribers.Add(accountName, [])
@@ -362,10 +492,24 @@ let registerAccount accountName =
 // this is used for testing "Simulate as many users as you can"
 let registerAccounts() = 
     for i in 0..numOfAccounts-1 do 
-        let name = i |> string
-        registerAccount(name)
         let accountList = [for n in 0 .. (numOfAccounts/(i+1))-1 -> (string i)]
         zipfSubscribers <- List.append zipfSubscribers accountList
+
+    let mutable tempList = zipfSubscribers
+    for i in 0..numOfAccounts-1 do
+        let name = i |> string
+
+        let mutable theList = []
+        let mutable index = 0
+        for item in tempList do
+            if (not (item = name) && not (List.contains item theList))
+            then 
+                theList <- List.append theList [item]
+                tempList  <- removeAt index tempList
+                index <- index - 1
+            index <- index + 1
+        registerAccount(name, theList)
+
     printfn "%i accounts created" (numOfAccounts)
         
 // will simulate users interacting with Twitter by sending messages to certain clients
