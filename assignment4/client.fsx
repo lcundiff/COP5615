@@ -84,7 +84,7 @@ let removeAt index list =
 
 let tweet(id:string,rndUserId:string, liveData:Dictionary<string,string list>,rndNum:int) = 
     let hashtag = "#" + createRndWord()
-    let mention = (rndUserId) // assume users start from 0 and increment 
+    let mention = rndUserId // assume users start from 0 and increment 
     let tweetMsg = createRndWord()
     let mutable tweet = "User: " + id + " tweeted @" + mention
     tweet <- tweet + " " + hashtag
@@ -93,7 +93,7 @@ let tweet(id:string,rndUserId:string, liveData:Dictionary<string,string list>,rn
     then
         printfn "%s is retweeting." id
         let mutable rndUserId2 = random.Next((numOfAccounts)) |> string 
-        server <! ("ReTweet",tweet, id, [hashtag], [mention],rndUserId2)
+        server <! ("ReTweet",tweet, id, [hashtag], [mention], rndUserId2)
         List.append liveData.["myTweets"] [tweet] 
     else 
         printfn "%s is tweeting." id
@@ -122,7 +122,7 @@ let subscribe(id:string,rndUserId:string, liveData:Dictionary<string,string list
             // printfn "zipfSubscribers: %A" zipfSubscribers
     )
     printfn "%s is subscribing to %s." id rndNonSubUserId    
-    server.Tell(("Subscribe", id, rndNonSubUserId,[""],[""],""), mailbox.Self)
+    server.Tell( ("Subscribe", id, rndNonSubUserId,[""],[""],""), mailbox.Self)
     List.append liveData.["mySubs"] [rndNonSubUserId] // update local data
 
 let unsubscribe(id:string, liveData:Dictionary<string,string list>,mailbox:Actor<_>) =
@@ -199,7 +199,7 @@ let client (id: string) = spawn system (string id) <| fun mailbox ->
                     else if (randomNumber <= tweetProbability + 30)
                     then
                         printfn "%s is requesting subscribed tweets." id    
-                        let mutable subsList = []
+                        let mutable subsList = [id]
                         subsList <- List.append liveData.["mySubs"] subsList
                         server.Tell(("SubscribedTweets","","",subsList,[""],""), mailbox.Self)
                     // RETRIEVE TWEETS FOR HASHTAG
@@ -219,24 +219,24 @@ let client (id: string) = spawn system (string id) <| fun mailbox ->
                     else if (randomNumber <= tweetProbability + 50)
                     then
                         printfn "%s is requesting mentions of %s." id randomUserId 
-                        server.Tell(("MentionedTweets",randomUserId,[""],[""],""), mailbox.Self)
+                        server.Tell(("MentionedTweets",randomUserId,"",[""],[""],""), mailbox.Self)
                 )
             | "AddFollower" ->
-                let (msgType,subscriber:string, list:string list, string2:string) : Tuple<string,string list,string> = downcast msg 
+                let (msgType,subscriber:string, list:string list, string2:string) : Tuple<string,string,string list,string> = downcast msg 
                 myFollowers <- List.append myFollowers [subscriber] 
                 //printfn "User %s: followers now (after adding): %A" id myFollowers
             | "RemoveFollower" ->
-                let (msgType,subscriber:string, list:string list, string2:string) : Tuple<string,string list,string> = downcast msg
+                let (msgType,subscriber:string, list:string list, string2:string) : Tuple<string,string,string list,string> = downcast msg
                 removeFromList(subscriber, myFollowers) |> ignore 
                 printfn "%s: followers now (after removing): %A" id myFollowers
             | "ReceiveTweets" ->
-                let (msgType,tweetType:string, tweets:string list, string2:string) : Tuple<string,string list,string> = downcast msg
+                let (msgType,tweetType:string, tweets:string list, string2:string) : Tuple<string,string,string list,string> = downcast msg
                 printfn "received tweets %A" tweets 
                 liveData.[tweetType] <- tweets // replace client side data 
                 showTweets(tweets,tweetType)
             // Add tweet is for live loading data after its already been queried 
             | "AddTweet" -> // server telling us someone we subscribed to tweeted (can be used for live data)
-                let (msgType,tweetType:string, list:string list , tweet:string) : Tuple<string,string list,string> = downcast msg
+                let (msgType,tweetType:string, list:string list , tweet:string) : Tuple<string,string,string list,string> = downcast msg
                 //printfn("adding tweet: %s") tweet
                 printfn "%s received a new tweet: %s" id tweet
                 liveData.[tweetType] <- List.append liveData.[tweetType] [tweet] 
@@ -253,7 +253,7 @@ let mutable clientIds = []
 let registerAccount accountName = 
         let clientActor = client accountName
         users.Add(accountName,clientActor)
-        clientIds <- List.append clientIds [users] 
+        clientIds <- List.append clientIds [accountName] 
         connectionStatus.Add(accountName, true)
 
 // this is used for testing "Simulate as many users as you can"
@@ -263,6 +263,7 @@ let registerAccounts() =
         registerAccount(name)
         let accountList = [for n in 0 .. (numOfAccounts/(i+1))-1 -> (string i)]
         zipfSubscribers <- List.append zipfSubscribers accountList
+    printfn "adding clients"
     server.Tell(("RegisterClients", "", "", clientIds,[""],""))
     //printfn "%i accounts created" (numOfAccounts)
         
@@ -270,7 +271,7 @@ let registerAccounts() =
 let simulator() = 
     for i in 0..numOfAccounts-1 do 
         let name = i |> string
-        users.[name] <! Simulate // Added <! Simulate to enable disconnect and reconnect.
+        users.[name] <! ("Simulate","",[""],"") // Added <! Simulate to enable disconnect and reconnect.
     
     //let tweeted = Async.RunSynchronously (users.["1"] <? Tweeting("yo",["#yo"],["@0"]), 1000)
     // TODO: "Simulate a Zipf distribution on the number of subscribers. For accounts with a lot of subscribers, increase the number of tweets. Make some of these messages re-tweets"
@@ -282,3 +283,4 @@ simulator() // go through those accounts and start simulations for each
 
 // TODO: "You need to measure various aspects of your simulator and report performance"
 System.Console.ReadLine() |> ignore // return an integer exit code
+

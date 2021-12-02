@@ -141,7 +141,7 @@ let ServerActor (mailbox:Actor<_>) =
         
         for user in usersSubscribers.[id] do 
             if (connectionStatus.[user] = true && users.ContainsKey(user))
-            then users.[user] <! ("AddTweet",tweetMsg, [""],"subscribedTo")
+            then users.[user] <! ("AddTweet","subscribedTo",[""],tweetMsg)
 
     let addFollower(subscriberId, subscribedToId) = 
         if usersSubscribers.ContainsKey(subscribedToId)
@@ -183,7 +183,7 @@ let ServerActor (mailbox:Actor<_>) =
                 let mentionedTweets = findTweets([userId],tweetsByMention)
                 sender <! ("ReceiveTweets","mentions",mentionedTweets,"")
             | "ToggleConnection" ->
-                let (_,id, status, _, _,_) : Tuple<string,string,string,string list,string list,string> = downcast msg 
+                let (_, id, status, _, _,_) : Tuple<string,string,string,string list,string list,string> = downcast msg 
                 let mutable newStatus = false
                 if status = "true"
                 then newStatus <- true
