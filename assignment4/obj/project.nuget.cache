@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "dgSpecHash": "boh0k57GRfnleaFThG1rNxL5ToHyzmSwAVT4UiVrIeELR4c1+UNvshcnuJcuZYVYOzH3fXj41wWK5yxEa0iELQ==",
+  "dgSpecHash": "bV8V7ohlVAyFCKm4uaiVJV+Thi2FIpHjF2HajaIIVuzeRW+jpua8elvdLZdQ/mHER+2GgIfoUM5TDMTKfefQNA==",
   "success": true,
   "projectFilePath": "C:\\Users\\Logan\\Documents\\GitHub\\COP5615\\assignment4\\assignment4.fsproj",
   "expectedPackageFiles": [
@@ -92,11 +92,7 @@
     "C:\\Users\\Logan\\.nuget\\packages\\websharper\\5.0.0.120\\websharper.5.0.0.120.nupkg.sha512",
     "C:\\Users\\Logan\\.nuget\\packages\\websharper.aspnetcore\\5.0.0.120\\websharper.aspnetcore.5.0.0.120.nupkg.sha512",
     "C:\\Users\\Logan\\.nuget\\packages\\websharper.fsharp\\5.0.0.120\\websharper.fsharp.5.0.0.120.nupkg.sha512",
-    "C:\\Users\\Logan\\.nuget\\packages\\websharper.ui\\5.0.0.120\\websharper.ui.5.0.0.120.nupkg.sha512",
-    "C:\\Users\\Logan\\.nuget\\packages\\microsoft.netcore.app.ref\\5.0.0\\microsoft.netcore.app.ref.5.0.0.nupkg.sha512",
-    "C:\\Users\\Logan\\.nuget\\packages\\microsoft.windowsdesktop.app.ref\\5.0.0\\microsoft.windowsdesktop.app.ref.5.0.0.nupkg.sha512",
-    "C:\\Users\\Logan\\.nuget\\packages\\microsoft.aspnetcore.app.ref\\5.0.0\\microsoft.aspnetcore.app.ref.5.0.0.nupkg.sha512",
-    "C:\\Users\\Logan\\.nuget\\packages\\microsoft.netcore.app.host.win-x64\\5.0.12\\microsoft.netcore.app.host.win-x64.5.0.12.nupkg.sha512"
+    "C:\\Users\\Logan\\.nuget\\packages\\websharper.ui\\5.0.0.120\\websharper.ui.5.0.0.120.nupkg.sha512"
   ],
   "logs": []
 }
