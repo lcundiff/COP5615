@@ -83,3 +83,4 @@ E:/COP5615Github/COP5615/assignment4/obj/Debug/net5.0/assignment4.fsproj.CopyCom
 E:/COP5615Github/COP5615/assignment4/obj/Debug/net5.0/assignment4.dll
 E:/COP5615Github/COP5615/assignment4/obj/Debug/net5.0/assignment4.pdb
 E:/COP5615Github/COP5615/assignment4/obj/Debug/net5.0/assignment4.genruntimeconfig.cache
+C:\Users\Logan\Documents\GitHub\COP5615\assignment4\obj\Debug\net5.0\assignment4.pdb
