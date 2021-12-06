@@ -57,3 +57,4 @@ C:\Users\Logan\Documents\GitHub\COP5615\assignment4\obj\Debug\net6.0\assignment4
 C:\Users\Logan\Documents\GitHub\COP5615\assignment4\obj\Debug\net6.0\assignment4.dll
 C:\Users\Logan\Documents\GitHub\COP5615\assignment4\obj\Debug\net6.0\assignment4.pdb
 C:\Users\Logan\Documents\GitHub\COP5615\assignment4\obj\Debug\net6.0\assignment4.genruntimeconfig.cache
+C:\Users\Logan\Documents\GitHub\COP5615\assignment4\bin\Debug\net6.0\assignment4.staticwebassets.runtime.json

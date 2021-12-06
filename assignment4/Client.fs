@@ -266,8 +266,8 @@ module ClientFunctions =
     // will simulate users interacting with Twitter by sending messages to certain clients
     let simulator() = 
         printfn "Welcome to Twitter Simulator, how many accounts would you like to create?"
-        let inputLine = Console.ReadLine() 
-        numOfAccounts <- (inputLine |> int) // please leave this as (inputLine |> int) do not add a -1 to this or it will mess up my code. i adjusted everything else with -1  
+        //let inputLine = Console.ReadLine() 
+        numOfAccounts <- (1 |> int) // please leave this as (inputLine |> int) do not add a -1 to this or it will mess up my code. i adjusted everything else with -1  
         registerAccounts() // init some test accounts
         printfn "%i zipfSubscribers: %A" zipfSubscribers.Length zipfSubscribers
         for i in 0..numOfAccounts-1 do 
