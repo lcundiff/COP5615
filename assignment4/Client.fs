@@ -19,11 +19,24 @@ module Templates =
 
 [<JavaScript>]
 module Client =
+    let showTweets (tweets:string list, tweetType:string) = 
+        printfn "%s tweets %A" tweetType tweets |> ignore // placeholder
+    
+    // store client-side data for "live delivery" as described in project description
+    let liveData = new Dictionary<string, string list>()
+    liveData.Add("myTweets",[]) // stores local live data of all tweets of this user
+    liveData.Add("subscribedTo",[]) // stores local live data of any tweets from users im subscribed to
+    liveData.Add("hashTag",[]) // stores local live data of most recent query of tweets by hashtag
+    liveData.Add("mentions",[]) // stores local live data of most recent query of tweets by mentions from a specific user (could be me)
+    liveData.Add("mySubs",[]) // stores local live data of user ids of who im subsribed to
+    let mutable connected = true
+    let mutable myFollowers: string list  = []
 
     let Main () =
         let rvReversed = Var.Create ""
         Templates.MainTemplate.MainForm() // main form is a ws-template in html template
             .OnTweet(fun e -> // propagated event from html when clicking tweet
+                //liveData.["myTweets"] <- tweet(id,randomUserId,liveData,randomNumber)
                 async {
                     let! res = Server.Tweet e.Vars.TextToReverse.Value
                     rvReversed := res

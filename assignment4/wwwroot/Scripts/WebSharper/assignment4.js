@@ -1,7 +1,7 @@
 (function(Global)
 {
  "use strict";
- var assignment4,Client,ClientFunctions,Message,SC$1,assignment4_Templates,WebSharper,Concurrency,Remoting,AjaxRemotingProvider,UI,Var$1,Templating,Runtime,Server,ProviderBuilder,Handler,TemplateInstance,console,Operators,IntelliFactory,Runtime$1,Utils,List,Seq,Collections,Dictionary,Arrays,Random,Obj,Client$1,Templates;
+ var assignment4,Client,ClientFunctions,Message,SC$1,assignment4_Templates,WebSharper,Concurrency,Remoting,AjaxRemotingProvider,UI,Var$1,Templating,Runtime,Server,ProviderBuilder,Handler,TemplateInstance,IntelliFactory,Runtime$1,Utils,console,Operators,List,Seq,Collections,Dictionary,Arrays,Random,Obj,Client$1,Templates;
  assignment4=Global.assignment4=Global.assignment4||{};
  Client=assignment4.Client=assignment4.Client||{};
  ClientFunctions=assignment4.ClientFunctions=assignment4.ClientFunctions||{};
@@ -20,11 +20,11 @@
  ProviderBuilder=Server&&Server.ProviderBuilder;
  Handler=Server&&Server.Handler;
  TemplateInstance=Server&&Server.TemplateInstance;
- console=Global.console;
- Operators=WebSharper&&WebSharper.Operators;
  IntelliFactory=Global.IntelliFactory;
  Runtime$1=IntelliFactory&&IntelliFactory.Runtime;
  Utils=WebSharper&&WebSharper.Utils;
+ console=Global.console;
+ Operators=WebSharper&&WebSharper.Operators;
  List=WebSharper&&WebSharper.List;
  Seq=WebSharper&&WebSharper.Seq;
  Collections=WebSharper&&WebSharper.Collections;
@@ -34,7 +34,7 @@
  Obj=WebSharper&&WebSharper.Obj;
  Client$1=UI&&UI.Client;
  Templates=Client$1&&Client$1.Templates;
- Client.Main$26$21=function(rvReversed)
+ Client.Main$38$21=function(rvReversed)
  {
   return function(e)
   {
@@ -72,6 +72,41 @@
    $0:"reversed",
    $1:R
   }),_this))),(p=Handler.CompleteHoles(b.k,b.h,[["texttoreverse",0]]),(i=new TemplateInstance.New(p[1],assignment4_Templates.mainform(p[0])),b.i=i,i))).get_Doc();
+ };
+ Client.myFollowers=function()
+ {
+  SC$1.$cctor();
+  return SC$1.myFollowers;
+ };
+ Client.set_myFollowers=function($1)
+ {
+  SC$1.$cctor();
+  SC$1.myFollowers=$1;
+ };
+ Client.connected=function()
+ {
+  SC$1.$cctor();
+  return SC$1.connected;
+ };
+ Client.set_connected=function($1)
+ {
+  SC$1.$cctor();
+  SC$1.connected=$1;
+ };
+ Client.liveData=function()
+ {
+  SC$1.$cctor();
+  return SC$1.liveData;
+ };
+ Client.showTweets=function(tweets,tweetType)
+ {
+  (((Runtime$1.Curried3(function($1,$2,$3)
+  {
+   return $1(Utils.toSafe($2)+" tweets "+Utils.printList(Utils.prettyPrint,$3));
+  }))(function(s)
+  {
+   console.log(s);
+  }))(tweetType))(tweets);
  };
  Message.Simulate={
   $:13
@@ -425,6 +460,14 @@
  SC$1.$cctor=function()
  {
   SC$1.$cctor=Global.ignore;
+  SC$1.liveData=new Dictionary.New$5();
+  Client.liveData().Add("myTweets",List.T.Empty);
+  Client.liveData().Add("subscribedTo",List.T.Empty);
+  Client.liveData().Add("hashTag",List.T.Empty);
+  Client.liveData().Add("mentions",List.T.Empty);
+  Client.liveData().Add("mySubs",List.T.Empty);
+  SC$1.connected=true;
+  SC$1.myFollowers=List.T.Empty;
   SC$1.clientIp="localhost";
   SC$1.serverIp="localhost";
   SC$1.random=new Random.New();
