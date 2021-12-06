@@ -1,25 +1,30 @@
 {
   "format": 1,
   "restore": {
-    "/home/logancundiff/Documents/GitHub/COP5615/assignment4/assignment4.fsproj": {}
+    "C:\\Users\\Logan\\Documents\\GitHub\\COP5615\\assignment4\\assignment4.fsproj": {}
   },
   "projects": {
-    "/home/logancundiff/Documents/GitHub/COP5615/assignment4/assignment4.fsproj": {
+    "C:\\Users\\Logan\\Documents\\GitHub\\COP5615\\assignment4\\assignment4.fsproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "/home/logancundiff/Documents/GitHub/COP5615/assignment4/assignment4.fsproj",
+        "projectUniqueName": "C:\\Users\\Logan\\Documents\\GitHub\\COP5615\\assignment4\\assignment4.fsproj",
         "projectName": "assignment4",
-        "projectPath": "/home/logancundiff/Documents/GitHub/COP5615/assignment4/assignment4.fsproj",
-        "packagesPath": "/home/logancundiff/.nuget/packages/",
-        "outputPath": "/home/logancundiff/Documents/GitHub/COP5615/assignment4/obj/",
+        "projectPath": "C:\\Users\\Logan\\Documents\\GitHub\\COP5615\\assignment4\\assignment4.fsproj",
+        "packagesPath": "C:\\Users\\Logan\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\Logan\\Documents\\GitHub\\COP5615\\assignment4\\obj\\",
         "projectStyle": "PackageReference",
+        "fallbackFolders": [
+          "C:\\Program Files\\dotnet\\sdk\\NuGetFallbackFolder"
+        ],
         "configFilePaths": [
-          "/home/logancundiff/.nuget/NuGet/NuGet.Config"
+          "C:\\Users\\Logan\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
         ],
         "originalTargetFrameworks": [
           "net5.0"
         ],
         "sources": {
+          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
           "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
@@ -33,15 +38,30 @@
         "net5.0": {
           "targetAlias": "net5.0",
           "dependencies": {
-            "Akka.FSharp": {
-              "target": "Package",
-              "version": "[1.4.25, )",
-              "generatePathProperty": true
-            },
             "FSharp.Core": {
               "include": "Runtime, Compile, Build, Native, Analyzers, BuildTransitive",
               "target": "Package",
-              "version": "[5.0.0, )",
+              "version": "[6.0.1, )",
+              "generatePathProperty": true
+            },
+            "WebSharper": {
+              "target": "Package",
+              "version": "[5.0.0.120, )",
+              "generatePathProperty": true
+            },
+            "WebSharper.AspNetCore": {
+              "target": "Package",
+              "version": "[5.0.0.120, )",
+              "generatePathProperty": true
+            },
+            "WebSharper.FSharp": {
+              "target": "Package",
+              "version": "[5.0.0.120, )",
+              "generatePathProperty": true
+            },
+            "WebSharper.UI": {
+              "target": "Package",
+              "version": "[5.0.0.120, )",
               "generatePathProperty": true
             }
           },
@@ -55,12 +75,33 @@
           ],
           "assetTargetFallback": true,
           "warn": true,
+          "downloadDependencies": [
+            {
+              "name": "Microsoft.AspNetCore.App.Ref",
+              "version": "[5.0.0, 5.0.0]"
+            },
+            {
+              "name": "Microsoft.NETCore.App.Host.win-x64",
+              "version": "[5.0.12, 5.0.12]"
+            },
+            {
+              "name": "Microsoft.NETCore.App.Ref",
+              "version": "[5.0.0, 5.0.0]"
+            },
+            {
+              "name": "Microsoft.WindowsDesktop.App.Ref",
+              "version": "[5.0.0, 5.0.0]"
+            }
+          ],
           "frameworkReferences": {
+            "Microsoft.AspNetCore.App": {
+              "privateAssets": "none"
+            },
             "Microsoft.NETCore.App": {
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "/usr/share/dotnet/sdk/5.0.402/RuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\6.0.100\\RuntimeIdentifierGraph.json"
         }
       }
     }

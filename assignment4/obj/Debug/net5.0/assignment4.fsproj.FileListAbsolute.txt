@@ -84,3 +84,9 @@ E:/COP5615Github/COP5615/assignment4/obj/Debug/net5.0/assignment4.dll
 E:/COP5615Github/COP5615/assignment4/obj/Debug/net5.0/assignment4.pdb
 E:/COP5615Github/COP5615/assignment4/obj/Debug/net5.0/assignment4.genruntimeconfig.cache
 C:\Users\Logan\Documents\GitHub\COP5615\assignment4\obj\Debug\net5.0\assignment4.pdb
+C:\Users\Logan\Documents\GitHub\COP5615\assignment4\obj\Debug\net5.0\assignment4.fsproj.AssemblyReference.cache
+C:\Users\Logan\Documents\GitHub\COP5615\assignment4\obj\Debug\net5.0\assignment4.AssemblyInfoInputs.cache
+C:\Users\Logan\Documents\GitHub\COP5615\assignment4\obj\Debug\net5.0\assignment4.AssemblyInfo.fs
+C:\Users\Logan\Documents\GitHub\COP5615\assignment4\obj\Debug\net5.0\assignment4.MvcApplicationPartsAssemblyInfo.fs
+C:\Users\Logan\Documents\GitHub\COP5615\assignment4\obj\Debug\net5.0\assignment4.MvcApplicationPartsAssemblyInfo.cache
+C:\Users\Logan\Documents\GitHub\COP5615\assignment4\obj\Debug\net5.0\assignment4.dll
