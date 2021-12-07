@@ -17,11 +17,36 @@ module Templates =
 
     type MainTemplate = Templating.Template<"Main.html", ClientLoad.FromDocument, ServerLoad.WhenChanged>
 
+
+
+[<JavaScript>]
+type SafeRemotingProvider() =
+    inherit Remoting.AjaxRemotingProvider()
+
+    override this.Endpoint = "https://myserver.com"
+
+    override this.AsyncBase(handle, data) =
+        let def = base.AsyncBase(handle, data) 
+        async {
+            try return! def
+            with e ->
+                Console.Log("Remoting exception", handle, e)
+                return box None
+        }
+
+[<Remote; RemotingProvider(typeof<SafeRemotingProvider>)>]
+let GetData key =
+    async { 
+        match DataStore.TryGetValue(key) with 
+        | true, c -> return Some c
+        | _ -> return None
+    }
+
+
 [<JavaScript>]
 module Client =
     let showTweets (tweets:string list, tweetType:string) = 
         printfn "%s tweets %A" tweetType tweets |> ignore // placeholder
-    
     // store client-side data for "live delivery" as described in project description
     let liveData = new Dictionary<string, string list>()
     liveData.Add("myTweets",[]) // stores local live data of all tweets of this user

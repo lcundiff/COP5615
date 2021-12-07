@@ -4,7 +4,9 @@ open WebSharper
 open System.Security.Cryptography
 open System.Text
 
-module Server =
+WebSharper.Remoting.EndPoint <- "http://your-client-server-application's-url"
+
+module Server = 
 
     [<Rpc>]
     let Tweet input =
