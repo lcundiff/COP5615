@@ -57,5 +57,5 @@ type MyWebsite(logger: ILogger<MyWebsite>) =
                 .Doc()
             |> Content.Page
         | About ->         
-            Content.Text "This is a Twitter Socket communication project developed using WebSharper by Madhuree Latha Allam and Ganesh Kurcheti. Please inspect and check the network tab for more details."
+            Content.Text "This is an about page."
     )
