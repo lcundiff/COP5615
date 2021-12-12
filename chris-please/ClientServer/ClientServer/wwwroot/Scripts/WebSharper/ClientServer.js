@@ -37,13 +37,13 @@
  Provider=ClientSideJson&&ClientSideJson.Provider;
  Client$2=UI&&UI.Client;
  Templates=Client$2&&Client$2.Templates;
- WebSocketClient.WebSocketTest$269$25=Global.id;
+ WebSocketClient.WebSocketTest$277$25=Global.id;
+ WebSocketClient.WebSocketTest$274$26=Global.id;
  WebSocketClient.WebSocketTest$266$26=Global.id;
- WebSocketClient.WebSocketTest$258$26=Global.id;
- WebSocketClient.WebSocketTest$249$26=Global.id;
- WebSocketClient.WebSocketTest$240$26=Global.id;
- WebSocketClient.WebSocketTest$231$26=Global.id;
- WebSocketClient.WebSocketTest$222$30=Global.id;
+ WebSocketClient.WebSocketTest$257$26=Global.id;
+ WebSocketClient.WebSocketTest$248$26=Global.id;
+ WebSocketClient.WebSocketTest$239$26=Global.id;
+ WebSocketClient.WebSocketTest$230$30=Global.id;
  WebSocketClient.WebSocketTest$84$22=function(retweet,msg)
  {
   return function()
@@ -157,6 +157,7 @@
      };
     }),Concurrency.Zero()):Concurrency.Zero(),Concurrency.Delay(function()
     {
+     var btn;
      (function($1)
      {
       return $1("Registering");
@@ -168,6 +169,11 @@
       $:1,
       $0:userName.Get()
      });
+     btn=self.document.getElementById("register");
+     btn.innerHTML="Account Registered";
+     btn.setAttribute("disabled","true");
+     userName.Set("Welcome to Twitter, @"+userName.Get());
+     self.document.getElementById("register-form").setAttribute("disabled","true");
      return Concurrency.Zero();
     }));
    })),null);
@@ -421,7 +427,7 @@
          console.log(s);
         }),Concurrency.Zero())):(function($1)
         {
-         return $1("FUCK");
+         return $1("Failure");
         }(function(s)
         {
          console.log(s);
@@ -447,7 +453,7 @@
   userName=Var$1.Create$1("");
   userToSubTo=Var$1.Create$1("");
   query=Var$1.Create$1("");
-  registerBox=Doc.Element("div",[],[Doc.Input([AttrProxy.Create("class","form-control")],userName),Doc.Element("button",[AttrProxy.Create("class","btn btn-primary"),AttrProxy.HandlerImpl("click",function($1)
+  registerBox=Doc.Element("div",[],[Doc.Input([AttrProxy.Create("class","form-control"),AttrProxy.Create("id","register-form")],userName),Doc.Element("button",[AttrProxy.Create("class","btn btn-primary"),AttrProxy.Create("id","register"),AttrProxy.HandlerImpl("click",function($1)
   {
    return function($2)
    {

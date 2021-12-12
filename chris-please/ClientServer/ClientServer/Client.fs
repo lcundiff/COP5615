@@ -131,7 +131,7 @@ let WebSocketTest (endpoint: WebSocketEndpoint<Server.MessagesToClient, Server.M
                             printfn "Failure! %s" fail
                         | _ -> printfn "A message was sent back"
                         
-                    | _ -> printfn "FUCK"
+                    | _ -> printfn "Failure"
                     return (state + 1)
                     
                 }    
@@ -157,6 +157,12 @@ let WebSocketTest (endpoint: WebSocketEndpoint<Server.MessagesToClient, Server.M
             printfn "Registering"
             server.Value.Post(Server.Register userName.Value)
             // userName.Value <- ""
+            let btn = JS.Document.GetElementById("register")
+            btn.InnerHTML <- "Account Registered"
+            btn.SetAttribute("disabled", "true")
+            userName.Value <- ("Welcome to Twitter, @" + userName.Value)
+            let form = JS.Document.GetElementById("register-form")
+            form.SetAttribute("disabled", "true")
         }
         |> Async.Start
 
@@ -216,9 +222,11 @@ let WebSocketTest (endpoint: WebSocketEndpoint<Server.MessagesToClient, Server.M
     let registerBox = 
         div [][
                 Doc.Input [
-                    attr.``class`` "form-control"]  userName
+                    attr.``class`` "form-control"
+                    attr.``id`` "register-form"]  userName
                 button [ 
-                    attr.``class`` "btn btn-primary"
+                    attr.``class`` "btn btn-primary" 
+                    attr.``id`` "register"
                     on.click (registerAccount) ] [ text "Register" ]
             ]
 
@@ -227,7 +235,7 @@ let WebSocketTest (endpoint: WebSocketEndpoint<Server.MessagesToClient, Server.M
             Doc.Input [
                 attr.``class`` "form-control"] tweetMessage
             button [
-                attr.``class`` "btn btn-primary"
+                attr.``class`` "btn btn-primary" 
                 on.click (postTweet) ] [text "Tweet"]
         ]
     
