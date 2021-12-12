@@ -95,7 +95,35 @@ let WebSocketTest (endpoint: WebSocketEndpoint<Server.MessagesToClient, Server.M
         let tweetContainerContent = tweetContainerDiv.AppendChild(tweetContentDiv)
         tweetContainerContent.AppendChild(retweetOption) |> ignore
         tweetContainer.Dom.AppendChild(tweetContainerContent)|>ignore
+    let userName = Var.Create ""
 
+    let enableFunctionality () = 
+        let btn = JS.Document.GetElementById("register")
+        btn.InnerHTML <- "Account Registered"
+        btn.SetAttribute("disabled", "true")
+        userName.Value <- ("Welcome to Twitter, @" + userName.Value)
+        let form = JS.Document.GetElementById("register-form")
+        form.SetAttribute("disabled", "true")
+        let loginoutbtn = JS.Document.GetElementById("logout")
+        loginoutbtn.RemoveAttribute("disabled")
+
+        // enable everything on register
+        let tweetBox = JS.Document.GetElementById("tweetbox")
+        let subscribeBox = JS.Document.GetElementById("subscribebox")
+        let unsubscribeBox = JS.Document.GetElementById("unsubscribebox")
+        let queryBox = JS.Document.GetElementById("querybox")
+        let tweetBtn = JS.Document.GetElementById("tweetbtn")
+        let subscribeBtn = JS.Document.GetElementById("subscribebtn")
+        let unsubscribeBtn = JS.Document.GetElementById("unsubscribebtn")
+        let queryBtn = JS.Document.GetElementById("querybtn")
+        tweetBox.RemoveAttribute("disabled")
+        subscribeBox.RemoveAttribute("disabled")
+        unsubscribeBox.RemoveAttribute("disabled")
+        queryBox.RemoveAttribute("disabled")
+        tweetBtn.RemoveAttribute("disabled")
+        subscribeBtn.RemoveAttribute("disabled")
+        unsubscribeBtn.RemoveAttribute("disabled")
+        queryBtn.RemoveAttribute("disabled")
 
     // Connects to Server and Waits for Tweets...?
     let connectToServer = 
@@ -129,6 +157,9 @@ let WebSocketTest (endpoint: WebSocketEndpoint<Server.MessagesToClient, Server.M
                             printfn "Success! %s" succ
                         | Failure fail ->
                             printfn "Failure! %s" fail
+                            JS.Alert(fail)
+                        | RegisteredFromServer ->
+                            enableFunctionality()
                         | _ -> printfn "A message was sent back"
                         
                     | _ -> printfn "Failure"
@@ -144,7 +175,6 @@ let WebSocketTest (endpoint: WebSocketEndpoint<Server.MessagesToClient, Server.M
 
     let userToUnsubTo = Var.Create ""
     let tweetMessage = Var.Create ""
-    let userName = Var.Create ""
     let userToSubTo = Var.Create ""
     let query = Var.Create ""
 
@@ -157,12 +187,6 @@ let WebSocketTest (endpoint: WebSocketEndpoint<Server.MessagesToClient, Server.M
             printfn "Registering"
             server.Value.Post(Server.Register userName.Value)
             // userName.Value <- ""
-            let btn = JS.Document.GetElementById("register")
-            btn.InnerHTML <- "Account Registered"
-            btn.SetAttribute("disabled", "true")
-            userName.Value <- ("Welcome to Twitter, @" + userName.Value)
-            let form = JS.Document.GetElementById("register-form")
-            form.SetAttribute("disabled", "true")
         }
         |> Async.Start
 
@@ -210,13 +234,61 @@ let WebSocketTest (endpoint: WebSocketEndpoint<Server.MessagesToClient, Server.M
     let loginToServer (x: Dom.Element) (y: Dom.MouseEvent) = 
         async {
             server.Value.Post(Server.Login)
+            let loginbtn = JS.Document.GetElementById("login")
+            let logoutbtn = JS.Document.GetElementById("logout")
+            let tweetBox = JS.Document.GetElementById("tweetbox")
+            let subscribeBox = JS.Document.GetElementById("subscribebox")
+            let unsubscribeBox = JS.Document.GetElementById("unsubscribebox")
+            let queryBox = JS.Document.GetElementById("querybox")
+            let tweetBtn = JS.Document.GetElementById("tweetbtn")
+            let subscribeBtn = JS.Document.GetElementById("subscribebtn")
+            let unsubscribeBtn = JS.Document.GetElementById("unsubscribebtn")
+            let queryBtn = JS.Document.GetElementById("querybtn")
+            tweetBox.RemoveAttribute("disabled")
+            subscribeBox.RemoveAttribute("disabled")
+            unsubscribeBox.RemoveAttribute("disabled")
+            queryBox.RemoveAttribute("disabled")
+            tweetBtn.RemoveAttribute("disabled")
+            subscribeBtn.RemoveAttribute("disabled")
+            unsubscribeBtn.RemoveAttribute("disabled")
+            queryBtn.RemoveAttribute("disabled")
+
+
+            loginbtn.RemoveAttribute("disabled")
+            logoutbtn.RemoveAttribute("disabled")
+            loginbtn.SetAttribute("disabled", "true")
         }
+
         |> Async.Start
 
     let logoutOfServer (x: Dom.Element) (y: Dom.MouseEvent) = 
         async {
             server.Value.Post(Server.Logout)
+            let loginbtn = JS.Document.GetElementById("login")
+            let logoutbtn = JS.Document.GetElementById("logout")
+            let tweetBox = JS.Document.GetElementById("tweetbox")
+            let subscribeBox = JS.Document.GetElementById("subscribebox")
+            let unsubscribeBox = JS.Document.GetElementById("unsubscribebox")
+            let queryBox = JS.Document.GetElementById("querybox")
+            let tweetBtn = JS.Document.GetElementById("tweetbtn")
+            let subscribeBtn = JS.Document.GetElementById("subscribebtn")
+            let unsubscribeBtn = JS.Document.GetElementById("unsubscribebtn")
+            let queryBtn = JS.Document.GetElementById("querybtn")
+            tweetBox.SetAttribute("disabled", "true")
+            subscribeBox.SetAttribute("disabled", "true")
+            unsubscribeBox.SetAttribute("disabled", "true")
+            queryBox.SetAttribute("disabled", "true")
+            tweetBtn.SetAttribute("disabled", "true")
+            subscribeBtn.SetAttribute("disabled", "true")
+            unsubscribeBtn.SetAttribute("disabled", "true")
+            queryBtn.SetAttribute("disabled", "true")
+
+
+            loginbtn.RemoveAttribute("disabled")
+            logoutbtn.RemoveAttribute("disabled")
+            logoutbtn.SetAttribute("disabled", "true")
         }
+
         |> Async.Start
 
     let registerBox = 
@@ -233,36 +305,56 @@ let WebSocketTest (endpoint: WebSocketEndpoint<Server.MessagesToClient, Server.M
     let tweetBox = 
         div [] [
             Doc.Input [
-                attr.``class`` "form-control"] tweetMessage
+                attr.``class`` "form-control"
+                attr.``id`` "tweetbox"
+                attr.``disabled`` "true"] tweetMessage
+                
             button [
                 attr.``class`` "btn btn-primary" 
+                attr.``id`` "tweetbtn"
+                attr.``disabled`` "true"
                 on.click (postTweet) ] [text "Tweet"]
         ]
     
     let subscribeBox = 
         div [] [
             Doc.Input [
-                attr.``class`` "form-control"] userToSubTo
+                attr.``class`` "form-control"
+                attr.``id`` "subscribebox"
+                attr.``disabled`` "true"] userToSubTo
+                
             button [
                 attr.``class`` "btn btn-primary"
+                attr.``id`` "subscribebtn"
+                attr.``disabled`` "true"
+
                 on.click (subscribeToUser) ] [text "Subscribe"]
         ]
 
     let unsubscribeBox = 
         div [] [
             Doc.Input [
-                attr.``class`` "form-control"] userToUnsubTo
+                attr.``class`` "form-control"
+                attr.``id`` "unsubscribebox"
+                attr.``disabled`` "true"] userToUnsubTo
             button [
                 attr.``class`` "btn btn-primary"
+                attr.``id`` "unsubscribebtn"
+                attr.``disabled`` "true"
                 on.click (unsubscribeToUser) ] [text "Unsubscribe"]
         ]
 
     let queryHashtagsBox = 
         div [] [
             Doc.Input [
-                attr.``class`` "form-control"] query
+                attr.``class`` "form-control"
+                attr.``id`` "querybox"
+                attr.``disabled`` "true"] query
+                
             button [
                 attr.``class`` "btn btn-primary"
+                attr.``id`` "querybtn"
+                attr.``disabled`` "true"
                 on.click (queryFromServer) ] [text "Query"]
         ]
 
@@ -271,9 +363,13 @@ let WebSocketTest (endpoint: WebSocketEndpoint<Server.MessagesToClient, Server.M
            button [
            
                 attr.``class`` "btn btn-primary"
+                attr.``id`` "login"
+                attr.``disabled`` "true"
                 on.click (loginToServer) ] [text "Login"]
            button [
                attr.``class`` "btn btn-primary"
+               attr.``id`` "logout"
+               attr.``disabled`` "true"
                on.click (logoutOfServer) ] [text "Logout"]
         ]
 

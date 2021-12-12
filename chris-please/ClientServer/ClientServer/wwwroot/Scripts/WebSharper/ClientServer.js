@@ -1,7 +1,7 @@
 (function(Global)
 {
  "use strict";
- var WebSharper,AspNetCore,Tests,WebSocketClient,Website,SomeRecord,Client,ClientServer_JsonDecoder,ClientServer_JsonEncoder,ClientServer_Templates,UI,Doc,AttrProxy,Arrays,Concurrency,Unchecked,console,JavaScript,Promise,Utils,WebSocket,Client$1,WithEncoding,JSON,Var$1,Templating,Runtime,Server,ProviderBuilder,Handler,TemplateInstance,ClientSideJson,Provider,Client$2,Templates;
+ var WebSharper,AspNetCore,Tests,WebSocketClient,Website,SomeRecord,Client,ClientServer_JsonDecoder,ClientServer_JsonEncoder,ClientServer_Templates,UI,Doc,AttrProxy,Arrays,Concurrency,Unchecked,console,JavaScript,Promise,Utils,Var$1,WebSocket,Client$1,WithEncoding,JSON,Templating,Runtime,Server,ProviderBuilder,Handler,TemplateInstance,ClientSideJson,Provider,Client$2,Templates;
  WebSharper=Global.WebSharper=Global.WebSharper||{};
  AspNetCore=WebSharper.AspNetCore=WebSharper.AspNetCore||{};
  Tests=AspNetCore.Tests=AspNetCore.Tests||{};
@@ -22,11 +22,11 @@
  JavaScript=WebSharper&&WebSharper.JavaScript;
  Promise=JavaScript&&JavaScript.Promise;
  Utils=WebSharper&&WebSharper.Utils;
+ Var$1=UI&&UI.Var$1;
  WebSocket=AspNetCore&&AspNetCore.WebSocket;
  Client$1=WebSocket&&WebSocket.Client;
  WithEncoding=Client$1&&Client$1.WithEncoding;
  JSON=Global.JSON;
- Var$1=UI&&UI.Var$1;
  Templating=UI&&UI.Templating;
  Runtime=Templating&&Templating.Runtime;
  Server=Runtime&&Runtime.Server;
@@ -37,13 +37,13 @@
  Provider=ClientSideJson&&ClientSideJson.Provider;
  Client$2=UI&&UI.Client;
  Templates=Client$2&&Client$2.Templates;
- WebSocketClient.WebSocketTest$277$25=Global.id;
- WebSocketClient.WebSocketTest$274$26=Global.id;
- WebSocketClient.WebSocketTest$266$26=Global.id;
- WebSocketClient.WebSocketTest$257$26=Global.id;
- WebSocketClient.WebSocketTest$248$26=Global.id;
- WebSocketClient.WebSocketTest$239$26=Global.id;
- WebSocketClient.WebSocketTest$230$30=Global.id;
+ WebSocketClient.WebSocketTest$373$25=Global.id;
+ WebSocketClient.WebSocketTest$368$26=Global.id;
+ WebSocketClient.WebSocketTest$358$26=Global.id;
+ WebSocketClient.WebSocketTest$344$26=Global.id;
+ WebSocketClient.WebSocketTest$331$26=Global.id;
+ WebSocketClient.WebSocketTest$316$26=Global.id;
+ WebSocketClient.WebSocketTest$302$30=Global.id;
  WebSocketClient.WebSocketTest$84$22=function(retweet,msg)
  {
   return function()
@@ -76,7 +76,7 @@
  };
  WebSocketClient.WebSocketTest=function(endpoint)
  {
-  var server,serverMessagesContainer,messagesHeader,queryMessagesContainer,queryHeader,tweetContainer,queryContainer,queryRequested,connectToServer,b,userToUnsubTo,tweetMessage,userName,userToSubTo,query,registerBox,tweetBox,subscribeBox,unsubscribeBox,queryHashtagsBox;
+  var server,serverMessagesContainer,messagesHeader,queryMessagesContainer,queryHeader,tweetContainer,queryContainer,queryRequested,userName,connectToServer,b,userToUnsubTo,tweetMessage,userToSubTo,query,registerBox,tweetBox,subscribeBox,unsubscribeBox,queryHashtagsBox;
   function retweet(msg)
   {
    server.$0.Post({
@@ -138,6 +138,32 @@
    tweetContainerContent.appendChild(retweetOption);
    tweetContainer.elt.appendChild(tweetContainerContent);
   }
+  function enableFunctionality()
+  {
+   var btn,tweetBox$1,subscribeBox$1,unsubscribeBox$1,queryBox,tweetBtn,subscribeBtn,unsubscribeBtn,queryBtn;
+   btn=self.document.getElementById("register");
+   btn.innerHTML="Account Registered";
+   btn.setAttribute("disabled","true");
+   userName.Set("Welcome to Twitter, @"+userName.Get());
+   self.document.getElementById("register-form").setAttribute("disabled","true");
+   self.document.getElementById("logout").removeAttribute("disabled");
+   tweetBox$1=self.document.getElementById("tweetbox");
+   subscribeBox$1=self.document.getElementById("subscribebox");
+   unsubscribeBox$1=self.document.getElementById("unsubscribebox");
+   queryBox=self.document.getElementById("querybox");
+   tweetBtn=self.document.getElementById("tweetbtn");
+   subscribeBtn=self.document.getElementById("subscribebtn");
+   unsubscribeBtn=self.document.getElementById("unsubscribebtn");
+   queryBtn=self.document.getElementById("querybtn");
+   tweetBox$1.removeAttribute("disabled");
+   subscribeBox$1.removeAttribute("disabled");
+   unsubscribeBox$1.removeAttribute("disabled");
+   queryBox.removeAttribute("disabled");
+   tweetBtn.removeAttribute("disabled");
+   subscribeBtn.removeAttribute("disabled");
+   unsubscribeBtn.removeAttribute("disabled");
+   queryBtn.removeAttribute("disabled");
+  }
   function registerAccount(x,y)
   {
    var b$1;
@@ -157,7 +183,6 @@
      };
     }),Concurrency.Zero()):Concurrency.Zero(),Concurrency.Delay(function()
     {
-     var btn;
      (function($1)
      {
       return $1("Registering");
@@ -169,11 +194,6 @@
       $:1,
       $0:userName.Get()
      });
-     btn=self.document.getElementById("register");
-     btn.innerHTML="Account Registered";
-     btn.setAttribute("disabled","true");
-     userName.Set("Welcome to Twitter, @"+userName.Get());
-     self.document.getElementById("register-form").setAttribute("disabled","true");
      return Concurrency.Zero();
     }));
    })),null);
@@ -312,9 +332,31 @@
    var b$1;
    return Concurrency.Start((b$1=null,Concurrency.Delay(function()
    {
+    var loginbtn,logoutbtn,tweetBox$1,subscribeBox$1,unsubscribeBox$1,queryBox,tweetBtn,subscribeBtn,unsubscribeBtn,queryBtn;
     server.$0.Post({
      $:5
     });
+    loginbtn=self.document.getElementById("login");
+    logoutbtn=self.document.getElementById("logout");
+    tweetBox$1=self.document.getElementById("tweetbox");
+    subscribeBox$1=self.document.getElementById("subscribebox");
+    unsubscribeBox$1=self.document.getElementById("unsubscribebox");
+    queryBox=self.document.getElementById("querybox");
+    tweetBtn=self.document.getElementById("tweetbtn");
+    subscribeBtn=self.document.getElementById("subscribebtn");
+    unsubscribeBtn=self.document.getElementById("unsubscribebtn");
+    queryBtn=self.document.getElementById("querybtn");
+    tweetBox$1.removeAttribute("disabled");
+    subscribeBox$1.removeAttribute("disabled");
+    unsubscribeBox$1.removeAttribute("disabled");
+    queryBox.removeAttribute("disabled");
+    tweetBtn.removeAttribute("disabled");
+    subscribeBtn.removeAttribute("disabled");
+    unsubscribeBtn.removeAttribute("disabled");
+    queryBtn.removeAttribute("disabled");
+    loginbtn.removeAttribute("disabled");
+    logoutbtn.removeAttribute("disabled");
+    loginbtn.setAttribute("disabled","true");
     return Concurrency.Zero();
    })),null);
   }
@@ -323,9 +365,31 @@
    var b$1;
    return Concurrency.Start((b$1=null,Concurrency.Delay(function()
    {
+    var loginbtn,logoutbtn,tweetBox$1,subscribeBox$1,unsubscribeBox$1,queryBox,tweetBtn,subscribeBtn,unsubscribeBtn,queryBtn;
     server.$0.Post({
      $:6
     });
+    loginbtn=self.document.getElementById("login");
+    logoutbtn=self.document.getElementById("logout");
+    tweetBox$1=self.document.getElementById("tweetbox");
+    subscribeBox$1=self.document.getElementById("subscribebox");
+    unsubscribeBox$1=self.document.getElementById("unsubscribebox");
+    queryBox=self.document.getElementById("querybox");
+    tweetBtn=self.document.getElementById("tweetbtn");
+    subscribeBtn=self.document.getElementById("subscribebtn");
+    unsubscribeBtn=self.document.getElementById("unsubscribebtn");
+    queryBtn=self.document.getElementById("querybtn");
+    tweetBox$1.setAttribute("disabled","true");
+    subscribeBox$1.setAttribute("disabled","true");
+    unsubscribeBox$1.setAttribute("disabled","true");
+    queryBox.setAttribute("disabled","true");
+    tweetBtn.setAttribute("disabled","true");
+    subscribeBtn.setAttribute("disabled","true");
+    unsubscribeBtn.setAttribute("disabled","true");
+    queryBtn.setAttribute("disabled","true");
+    loginbtn.removeAttribute("disabled");
+    logoutbtn.removeAttribute("disabled");
+    logoutbtn.setAttribute("disabled","true");
     return Concurrency.Zero();
    })),null);
   }
@@ -337,6 +401,7 @@
   tweetContainer=Doc.Element("div",[],[]);
   queryContainer=Doc.Element("div",[],[]);
   queryRequested="";
+  userName=Var$1.Create$1("");
   connectToServer=(b=null,Concurrency.Delay(function()
   {
    (function($1)
@@ -366,7 +431,7 @@
        b$2=null;
        return Concurrency.Delay(function()
        {
-        var data,responseMsg,tweet,responseMsg$1,tweet$1,hashtags,responseMsg$2,tweet$2;
+        var data,responseMsg,tweet,responseMsg$1,tweet$1,hashtags,responseMsg$2,tweet$2,fail;
         (function($1)
         {
          return $1("In in here here!");
@@ -410,7 +475,7 @@
         }(function(s)
         {
          console.log(s);
-        }))(data.$0),Concurrency.Zero()):data.$==4?((function($1)
+        }))(data.$0),Concurrency.Zero()):data.$==4?(fail=data.$0,((function($1)
         {
          return function($2)
          {
@@ -419,7 +484,7 @@
         }(function(s)
         {
          console.log(s);
-        }))(data.$0),Concurrency.Zero()):(function($1)
+        }))(fail),Global.alert(fail),Concurrency.Zero())):data.$==2?(enableFunctionality(),Concurrency.Zero()):(function($1)
         {
          return $1("A message was sent back");
         }(function(s)
@@ -450,7 +515,6 @@
   });
   userToUnsubTo=Var$1.Create$1("");
   tweetMessage=Var$1.Create$1("");
-  userName=Var$1.Create$1("");
   userToSubTo=Var$1.Create$1("");
   query=Var$1.Create$1("");
   registerBox=Doc.Element("div",[],[Doc.Input([AttrProxy.Create("class","form-control"),AttrProxy.Create("id","register-form")],userName),Doc.Element("button",[AttrProxy.Create("class","btn btn-primary"),AttrProxy.Create("id","register"),AttrProxy.HandlerImpl("click",function($1)
@@ -460,41 +524,41 @@
     return registerAccount($1,$2);
    };
   })],[Doc.TextNode("Register")])]);
-  tweetBox=Doc.Element("div",[],[Doc.Input([AttrProxy.Create("class","form-control")],tweetMessage),Doc.Element("button",[AttrProxy.Create("class","btn btn-primary"),AttrProxy.HandlerImpl("click",function($1)
+  tweetBox=Doc.Element("div",[],[Doc.Input([AttrProxy.Create("class","form-control"),AttrProxy.Create("id","tweetbox"),AttrProxy.Create("disabled","true")],tweetMessage),Doc.Element("button",[AttrProxy.Create("class","btn btn-primary"),AttrProxy.Create("id","tweetbtn"),AttrProxy.Create("disabled","true"),AttrProxy.HandlerImpl("click",function($1)
   {
    return function($2)
    {
     return postTweet($1,$2);
    };
   })],[Doc.TextNode("Tweet")])]);
-  subscribeBox=Doc.Element("div",[],[Doc.Input([AttrProxy.Create("class","form-control")],userToSubTo),Doc.Element("button",[AttrProxy.Create("class","btn btn-primary"),AttrProxy.HandlerImpl("click",function($1)
+  subscribeBox=Doc.Element("div",[],[Doc.Input([AttrProxy.Create("class","form-control"),AttrProxy.Create("id","subscribebox"),AttrProxy.Create("disabled","true")],userToSubTo),Doc.Element("button",[AttrProxy.Create("class","btn btn-primary"),AttrProxy.Create("id","subscribebtn"),AttrProxy.Create("disabled","true"),AttrProxy.HandlerImpl("click",function($1)
   {
    return function($2)
    {
     return subscribeToUser($1,$2);
    };
   })],[Doc.TextNode("Subscribe")])]);
-  unsubscribeBox=Doc.Element("div",[],[Doc.Input([AttrProxy.Create("class","form-control")],userToUnsubTo),Doc.Element("button",[AttrProxy.Create("class","btn btn-primary"),AttrProxy.HandlerImpl("click",function($1)
+  unsubscribeBox=Doc.Element("div",[],[Doc.Input([AttrProxy.Create("class","form-control"),AttrProxy.Create("id","unsubscribebox"),AttrProxy.Create("disabled","true")],userToUnsubTo),Doc.Element("button",[AttrProxy.Create("class","btn btn-primary"),AttrProxy.Create("id","unsubscribebtn"),AttrProxy.Create("disabled","true"),AttrProxy.HandlerImpl("click",function($1)
   {
    return function($2)
    {
     return unsubscribeToUser($1,$2);
    };
   })],[Doc.TextNode("Unsubscribe")])]);
-  queryHashtagsBox=Doc.Element("div",[],[Doc.Input([AttrProxy.Create("class","form-control")],query),Doc.Element("button",[AttrProxy.Create("class","btn btn-primary"),AttrProxy.HandlerImpl("click",function($1)
+  queryHashtagsBox=Doc.Element("div",[],[Doc.Input([AttrProxy.Create("class","form-control"),AttrProxy.Create("id","querybox"),AttrProxy.Create("disabled","true")],query),Doc.Element("button",[AttrProxy.Create("class","btn btn-primary"),AttrProxy.Create("id","querybtn"),AttrProxy.Create("disabled","true"),AttrProxy.HandlerImpl("click",function($1)
   {
    return function($2)
    {
     return queryFromServer($1,$2);
    };
   })],[Doc.TextNode("Query")])]);
-  return Doc.Element("div",[],[registerBox,Doc.Element("div",[],[Doc.Element("button",[AttrProxy.Create("class","btn btn-primary"),AttrProxy.HandlerImpl("click",function($1)
+  return Doc.Element("div",[],[registerBox,Doc.Element("div",[],[Doc.Element("button",[AttrProxy.Create("class","btn btn-primary"),AttrProxy.Create("id","login"),AttrProxy.Create("disabled","true"),AttrProxy.HandlerImpl("click",function($1)
   {
    return function($2)
    {
     return loginToServer($1,$2);
    };
-  })],[Doc.TextNode("Login")]),Doc.Element("button",[AttrProxy.Create("class","btn btn-primary"),AttrProxy.HandlerImpl("click",function($1)
+  })],[Doc.TextNode("Login")]),Doc.Element("button",[AttrProxy.Create("class","btn btn-primary"),AttrProxy.Create("id","logout"),AttrProxy.Create("disabled","true"),AttrProxy.HandlerImpl("click",function($1)
   {
    return function($2)
    {
@@ -523,7 +587,7 @@
  };
  ClientServer_JsonDecoder.j=function()
  {
-  return ClientServer_JsonDecoder._v?ClientServer_JsonDecoder._v:ClientServer_JsonDecoder._v=(Provider.DecodeUnion(void 0,"$",[[0,[["$0","con",Provider.Id(),0]]],[1,[["$0","tweet",Provider.Id(),0]]],[2,[["$0","register",Provider.Id(),0]]],[3,[["$0","succ",Provider.Id(),0]]],[4,[["$0","fail",Provider.Id(),0]]],[5,[["$0","tweet",Provider.Id(),0]]],[6,[["$0","tweet",Provider.Id(),0]]]]))();
+  return ClientServer_JsonDecoder._v?ClientServer_JsonDecoder._v:ClientServer_JsonDecoder._v=(Provider.DecodeUnion(void 0,"$",[[0,[["$0","con",Provider.Id(),0]]],[1,[["$0","tweet",Provider.Id(),0]]],[2,[]],[3,[["$0","succ",Provider.Id(),0]]],[4,[["$0","fail",Provider.Id(),0]]],[5,[["$0","tweet",Provider.Id(),0]]],[6,[["$0","tweet",Provider.Id(),0]]]]))();
  };
  ClientServer_JsonEncoder.j=function()
  {

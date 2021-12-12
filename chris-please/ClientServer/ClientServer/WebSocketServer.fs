@@ -24,7 +24,7 @@ type MessagesToServer =
 type MessagesToClient = 
     | Connection of con : string
     | TweetFromServer of tweet : string
-    | RegisteredFromServer of register : string
+    | RegisteredFromServer
     | Success of succ: string
     | Failure of fail: string
     | QueryFromServer of tweet : string
@@ -116,7 +116,9 @@ let ServerStart() : StatefulAgent<MessagesToClient, MessagesToServer, int> =
                 | Register account ->
                     // TODO: Handle duplicate accounts?
                     printfn "Registered"
-                    if (userNameAndUser.ContainsKey(account))
+                    if (account.Length = 0)
+                    then do! (sendMessageWithClientId (clientGuId) (Failure "Please enter a username with at least 1 character.")) |> Async.Ignore
+                    else if (userNameAndUser.ContainsKey(account))
                     then do! (sendMessageWithClientId (clientGuId) (Failure "This user is already registered")) |> Async.Ignore
                     else 
                         let user = createUser account clientGuId
@@ -127,7 +129,7 @@ let ServerStart() : StatefulAgent<MessagesToClient, MessagesToServer, int> =
                         users.Add(user) |> ignore
                         // I automatically make the user subscribe to themselves so they receive their own tweets.
                         userNamesAndTheirSubscribers.Add(account, [account])
-                        do! (sendMessageWithClientId (clientGuId) (Success "Registered")) |> Async.Ignore
+                        do! (sendMessageWithClientId (clientGuId) (RegisteredFromServer)) |> Async.Ignore
                 | Login ->
                     // When people log in we are going to auto-send all the messages they missed out on.
                     let userName = guIdAndUserName.[clientGuId]
@@ -185,6 +187,8 @@ let ServerStart() : StatefulAgent<MessagesToClient, MessagesToServer, int> =
                     let sender = userNameAndUser.[senderUserName]
                     if (sender.onlineStatus = 0) then 
                         do! (sendMessageWithClientId (clientGuId) (Failure "Cannot tweet while you're offline")) |> Async.Ignore
+                    else if (msgTweet.Length = 0) then 
+                        do! (sendMessageWithClientId (clientGuId) (Failure "Cannot tweet empty message.")) |> Async.Ignore
                     else 
                         let tweetToDistribute = createTweet senderUserName msgTweet
                         // TODO: We need to determine who the tweet should get sent to, but for now we will send it to everyone
@@ -291,6 +295,7 @@ let ServerStart() : StatefulAgent<MessagesToClient, MessagesToServer, int> =
                             subs <- List.append subs [senderUserName]
                             userNamesAndTheirSubscribers.[userToSubTo] <- subs
                             do! sendMessageWithClientId (clientGuId) (Success ("You successfully subscribed to the user: " + userToSubTo)) |> Async.Ignore
+                        
                 | Unsubscribe userToUnsubTo -> 
                     let senderUserName = guIdAndUserName.[clientGuId]
                     let sender = userNameAndUser.[clientGuId]
