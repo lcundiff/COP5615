@@ -20,10 +20,17 @@ let WebSocketTest (endpoint: WebSocketEndpoint<Server.MessagesToClient, Server.M
 
     let serverMessagesContainer = Elt.pre [] []
     let messagesHeader = Elt.div [] [
-        Elt.h3[][text "Messages from server"]
+        Elt.h3[][text "Your Twitter Feed"]
+    ]
+
+    let queryMessagesContainer = Elt.pre [] []
+    let queryHeader = Elt.div[] [
+        Elt.h3[][text "Your Queried Requests"]
     ]
 
     let tweetContainer = Elt.div[][]
+    let queryContainer = Elt.div[][]
+    let mutable hashtagRequested = ""
 
 
     let retweet msg =
@@ -42,12 +49,33 @@ let WebSocketTest (endpoint: WebSocketEndpoint<Server.MessagesToClient, Server.M
         let tweetContainerDiv = JS.Document.CreateElement("div")
         let tweetContentDiv = JS.Document.CreateElement("div")
         let retweetButtonDiv = JS.Document.CreateElement("div")
-        let reteetButtonDom =  retweetBtn.Dom
-        let retweetOption =  retweetButtonDiv.AppendChild(reteetButtonDom)
+        let retweetButtonDom =  retweetBtn.Dom
+        let retweetOption =  retweetButtonDiv.AppendChild(retweetButtonDom)
         tweetContentDiv.InnerHTML <- String.Format("<div style=\"display:flex;justify-content:center\"><div>{0}</div><div style=\"margin-left:10px\">{1}</div><div>",user,msg)
         let tweetContainerContent = tweetContainerDiv.AppendChild(tweetContentDiv)
         tweetContainerContent.AppendChild(retweetOption) |> ignore
         tweetContainer.Dom.AppendChild(tweetContainerContent)|>ignore
+
+    let addQueries user msg = 
+        let retweetBtn = 
+            Elt.button [
+            
+            attr.``class`` "retweet-handler btn btn-info"
+            on.click (fun _ _ ->
+                retweet (msg))
+            ] [
+                text "Retweet!"
+            ]
+        let queryContainerDiv = JS.Document.CreateElement("div")
+        let queryContentDiv = JS.Document.CreateElement("div")
+        let retweetButtonDiv = JS.Document.CreateElement("div")
+        let retweetButtonDom =  retweetBtn.Dom
+        let retweetOption =  retweetButtonDiv.AppendChild(retweetButtonDom)
+        queryContentDiv.InnerHTML <- String.Format("<div style=\"display:flex;justify-content:center\"><div>Query for #{0}: {1}</div><div style=\"margin-left:10px\">{2}</div><div>",hashtagRequested,user,msg)
+        let queryContainerContent = queryContainerDiv.AppendChild(queryContentDiv)
+        queryContainerContent.AppendChild(retweetOption) |> ignore
+        queryContainer.Dom.AppendChild(queryContainerContent)|>ignore
+
 
     // Connects to Server and Waits for Tweets...?
     let connectToServer = 
@@ -56,18 +84,27 @@ let WebSocketTest (endpoint: WebSocketEndpoint<Server.MessagesToClient, Server.M
             return! ConnectStateful endpoint <| fun server -> async {
                 return 0, fun state msg -> async {
                     printfn "In in here here!"
-
                     match msg with 
                     | Message data ->
                         match data with 
                         | TweetFromServer response ->
-                            if (response.Contains("")) then 
-                                let responseMsg = response.JS.Split(",")
-                                printfn "ResponseMSG %A" (responseMsg)
-                                let tweet =  responseMsg.[0].JS.Split("\"").[3]
-                                let user =  responseMsg.[1].JS.Split("\"").[3]
-                                addTweetToFeed user tweet
+                            let responseMsg = response.JS.Split(",")
+                            printfn "ResponseMSG %A" (responseMsg)
+                            let tweet =  responseMsg.[0].JS.Split("\"").[3]
+                            let user =  responseMsg.[1].JS.Split("\"").[3]
+                            addTweetToFeed user tweet
+                        | HashtagsFromServer hashtags ->
+                            let responseMsg = hashtags.JS.Split(",")
+                            printfn "ResponseMSG %A" (hashtags)
+                            let tweet =  responseMsg.[0].JS.Split("\"").[3]
+                            let user =  responseMsg.[1].JS.Split("\"").[3]
+                            addQueries user tweet
+                        | Success succ ->
+                            printfn "Success! %s" succ
+                        | Failure fail ->
+                            printfn "Failure! %s" fail
                         | _ -> printfn "A message was sent back"
+                        
                     | _ -> printfn "FUCK"
                     return (state + 1)
                     
@@ -79,8 +116,11 @@ let WebSocketTest (endpoint: WebSocketEndpoint<Server.MessagesToClient, Server.M
     connectToServer.AsPromise().Then(fun x -> server <- Some(x)) |> ignore
 
 
+    let userToUnsubTo = Var.Create ""
     let tweetMessage = Var.Create ""
     let userName = Var.Create ""
+    let userToSubTo = Var.Create ""
+    let queryHashtags = Var.Create ""
 
 
     let registerAccount (x: Dom.Element) (y: Dom.MouseEvent) = 
@@ -90,6 +130,7 @@ let WebSocketTest (endpoint: WebSocketEndpoint<Server.MessagesToClient, Server.M
                 connectToServer.AsPromise().Then(fun x -> server <-Some(x)) |> ignore   
             printfn "Registering"
             server.Value.Post(Server.Register userName.Value)
+            // userName.Value <- ""
         }
         |> Async.Start
 
@@ -99,10 +140,42 @@ let WebSocketTest (endpoint: WebSocketEndpoint<Server.MessagesToClient, Server.M
                 connectToServer.AsPromise().Then(fun x -> server <-Some(x)) |> ignore   
             printfn "Tweeting %s" tweetMessage.Value
             server.Value.Post(Server.Tweet tweetMessage.Value)
+            tweetMessage.Value <- ""
         }
         |> Async.Start
 
-    let registerForm = 
+    let subscribeToUser (x: Dom.Element) (y: Dom.MouseEvent) = 
+        async {
+            if (server = None) then 
+                connectToServer.AsPromise().Then(fun x -> server <-Some(x)) |> ignore   
+            printfn "Subscribing to %s" userToSubTo.Value
+            server.Value.Post(Server.Subscribe userToSubTo.Value)
+            userToSubTo.Value <- ""
+        }
+        |> Async.Start
+
+    let unsubscribeToUser (x: Dom.Element) (y: Dom.MouseEvent) = 
+        async {
+            if (server = None) then 
+                connectToServer.AsPromise().Then(fun x -> server <-Some(x)) |> ignore   
+            printfn "Unsubscribing to %s" userToUnsubTo.Value
+            server.Value.Post(Server.Unsubscribe userToUnsubTo.Value)
+            userToUnsubTo.Value <- ""
+        }
+        |> Async.Start
+
+    let queryHashtagsFromServer (x: Dom.Element) (y: Dom.MouseEvent) = 
+        async {
+            if (server = None) then 
+                connectToServer.AsPromise().Then(fun x -> server <-Some(x)) |> ignore   
+            printfn "Querying #%s" queryHashtags.Value
+            server.Value.Post(Server.QueryHashtags queryHashtags.Value)
+            hashtagRequested <- queryHashtags.Value
+            queryHashtags.Value <- ""
+        }
+        |> Async.Start
+
+    let registerBox = 
         div [][
                 Doc.Input [
                     attr.``class`` "form-control"]  userName
@@ -111,7 +184,7 @@ let WebSocketTest (endpoint: WebSocketEndpoint<Server.MessagesToClient, Server.M
                     on.click (registerAccount) ] [ text "Register" ]
             ]
 
-    let createTweetForm = 
+    let tweetBox = 
         div [] [
             Doc.Input [
                 attr.``class`` "form-control"] tweetMessage
@@ -119,14 +192,47 @@ let WebSocketTest (endpoint: WebSocketEndpoint<Server.MessagesToClient, Server.M
                 attr.``class`` "btn btn-primary"
                 on.click (postTweet) ] [text "Tweet"]
         ]
+    
+    let subscribeBox = 
+        div [] [
+            Doc.Input [
+                attr.``class`` "form-control"] userToSubTo
+            button [
+                attr.``class`` "btn btn-primary"
+                on.click (subscribeToUser) ] [text "Subscribe"]
+        ]
+
+    let unsubscribeBox = 
+        div [] [
+            Doc.Input [
+                attr.``class`` "form-control"] userToUnsubTo
+            button [
+                attr.``class`` "btn btn-primary"
+                on.click (unsubscribeToUser) ] [text "Unsubscribe"]
+        ]
+
+    let queryHashtagsBox = 
+        div [] [
+            Doc.Input [
+                attr.``class`` "form-control"] queryHashtags
+            button [
+                attr.``class`` "btn btn-primary"
+                on.click (queryHashtagsFromServer) ] [text "Query Hashtags"]
+        ]
 
     div []
         [
-            registerForm
-            createTweetForm
+            registerBox
+            queryHashtagsBox
+            subscribeBox
+            unsubscribeBox
+            tweetBox
             messagesHeader
             serverMessagesContainer
             tweetContainer
+            queryHeader
+            queryMessagesContainer
+            queryContainer
         ]
 
     

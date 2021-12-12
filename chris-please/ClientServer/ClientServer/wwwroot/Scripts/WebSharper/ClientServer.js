@@ -37,9 +37,22 @@
  Provider=ClientSideJson&&ClientSideJson.Provider;
  Client$2=UI&&UI.Client;
  Templates=Client$2&&Client$2.Templates;
- WebSocketClient.WebSocketTest$120$26=Global.id;
- WebSocketClient.WebSocketTest$111$30=Global.id;
- WebSocketClient.WebSocketTest$37$22=function(retweet,msg)
+ WebSocketClient.WebSocketTest$220$26=Global.id;
+ WebSocketClient.WebSocketTest$211$26=Global.id;
+ WebSocketClient.WebSocketTest$202$26=Global.id;
+ WebSocketClient.WebSocketTest$193$26=Global.id;
+ WebSocketClient.WebSocketTest$184$30=Global.id;
+ WebSocketClient.WebSocketTest$64$22=function(retweet,msg)
+ {
+  return function()
+  {
+   return function()
+   {
+    return retweet(msg);
+   };
+  };
+ };
+ WebSocketClient.WebSocketTest$44$22=function(retweet,msg)
  {
   return function()
   {
@@ -51,7 +64,7 @@
  };
  WebSocketClient.WebSocketTest=function(endpoint)
  {
-  var server,serverMessagesContainer,messagesHeader,tweetContainer,connectToServer,b,tweetMessage,userName;
+  var server,serverMessagesContainer,messagesHeader,queryMessagesContainer,queryHeader,tweetContainer,queryContainer,hashtagRequested,connectToServer,b,userToUnsubTo,tweetMessage,userName,userToSubTo,queryHashtags,registerBox,tweetBox,subscribeBox,unsubscribeBox;
   function retweet(msg)
   {
    server.$0.Post({
@@ -76,6 +89,24 @@
    tweetContainerContent=tweetContainerDiv.appendChild(tweetContentDiv);
    tweetContainerContent.appendChild(retweetOption);
    tweetContainer.elt.appendChild(tweetContainerContent);
+  }
+  function addQueries(user,msg)
+  {
+   var retweetBtn,queryContainerDiv,queryContentDiv,retweetOption,$1,queryContainerContent;
+   retweetBtn=Doc.Element("button",[AttrProxy.Create("class","retweet-handler btn btn-info"),AttrProxy.HandlerImpl("click",function()
+   {
+    return function()
+    {
+     return retweet(msg);
+    };
+   })],[Doc.TextNode("Retweet!")]);
+   queryContainerDiv=self.document.createElement("div");
+   queryContentDiv=self.document.createElement("div");
+   retweetOption=self.document.createElement("div").appendChild(retweetBtn.elt);
+   queryContentDiv.innerHTML=($1=[hashtagRequested,user,msg],"<div style=\"display:flex;justify-content:center\"><div>Query for "+(Arrays.get($1,0)==null?"":Global.String(Arrays.get($1,0)))+(": "+(Arrays.get($1,1)==null?"":Global.String(Arrays.get($1,1))))+("</div><div style=\"margin-left:10px\">"+(Arrays.get($1,2)==null?"":Global.String(Arrays.get($1,2))))+"</div><div>");
+   queryContainerContent=queryContainerDiv.appendChild(queryContentDiv);
+   queryContainerContent.appendChild(retweetOption);
+   queryContainer.elt.appendChild(queryContainerContent);
   }
   function registerAccount(x,y)
   {
@@ -138,14 +169,116 @@
       $:0,
       $0:tweetMessage.Get()
      });
+     tweetMessage.Set("");
+     return Concurrency.Zero();
+    }));
+   })),null);
+  }
+  function subscribeToUser(x,y)
+  {
+   var b$1;
+   return Concurrency.Start((b$1=null,Concurrency.Delay(function()
+   {
+    return Concurrency.Combine(Unchecked.Equals(server,null)?(Promise.OfAsync(connectToServer).then(function(x$1)
+    {
+     server={
+      $:1,
+      $0:x$1
+     };
+    }),Concurrency.Zero()):Concurrency.Zero(),Concurrency.Delay(function()
+    {
+     ((function($1)
+     {
+      return function($2)
+      {
+       return $1("Subscribing to "+Utils.toSafe($2));
+      };
+     }(function(s)
+     {
+      console.log(s);
+     }))(userToSubTo.Get()));
+     server.$0.Post({
+      $:2,
+      $0:userToSubTo.Get()
+     });
+     userToSubTo.Set("");
+     return Concurrency.Zero();
+    }));
+   })),null);
+  }
+  function unsubscribeToUser(x,y)
+  {
+   var b$1;
+   return Concurrency.Start((b$1=null,Concurrency.Delay(function()
+   {
+    return Concurrency.Combine(Unchecked.Equals(server,null)?(Promise.OfAsync(connectToServer).then(function(x$1)
+    {
+     server={
+      $:1,
+      $0:x$1
+     };
+    }),Concurrency.Zero()):Concurrency.Zero(),Concurrency.Delay(function()
+    {
+     ((function($1)
+     {
+      return function($2)
+      {
+       return $1("Unsubscribing to "+Utils.toSafe($2));
+      };
+     }(function(s)
+     {
+      console.log(s);
+     }))(userToUnsubTo.Get()));
+     server.$0.Post({
+      $:3,
+      $0:userToUnsubTo.Get()
+     });
+     userToUnsubTo.Set("");
+     return Concurrency.Zero();
+    }));
+   })),null);
+  }
+  function queryHashtagsFromServer(x,y)
+  {
+   var b$1;
+   return Concurrency.Start((b$1=null,Concurrency.Delay(function()
+   {
+    return Concurrency.Combine(Unchecked.Equals(server,null)?(Promise.OfAsync(connectToServer).then(function(x$1)
+    {
+     server={
+      $:1,
+      $0:x$1
+     };
+    }),Concurrency.Zero()):Concurrency.Zero(),Concurrency.Delay(function()
+    {
+     ((function($1)
+     {
+      return function($2)
+      {
+       return $1("Querying #"+Utils.toSafe($2));
+      };
+     }(function(s)
+     {
+      console.log(s);
+     }))(queryHashtags.Get()));
+     server.$0.Post({
+      $:4,
+      $0:queryHashtags.Get()
+     });
+     hashtagRequested=queryHashtags.Get();
+     queryHashtags.Set("");
      return Concurrency.Zero();
     }));
    })),null);
   }
   server=null;
   serverMessagesContainer=Doc.Element("pre",[],[]);
-  messagesHeader=Doc.Element("div",[],[Doc.Element("h3",[],[Doc.TextNode("Messages from server")])]);
+  messagesHeader=Doc.Element("div",[],[Doc.Element("h3",[],[Doc.TextNode("Your Twitter Feed")])]);
+  queryMessagesContainer=Doc.Element("pre",[],[]);
+  queryHeader=Doc.Element("div",[],[Doc.Element("h3",[],[Doc.TextNode("Your Queried Requests")])]);
   tweetContainer=Doc.Element("div",[],[]);
+  queryContainer=Doc.Element("div",[],[]);
+  hashtagRequested="";
   connectToServer=(b=null,Concurrency.Delay(function()
   {
    (function($1)
@@ -175,7 +308,7 @@
        b$2=null;
        return Concurrency.Delay(function()
        {
-        var data,response,responseMsg,tweet;
+        var data,responseMsg,tweet,hashtags,responseMsg$1,tweet$1;
         (function($1)
         {
          return $1("In in here here!");
@@ -183,7 +316,7 @@
         {
          console.log(s);
         }));
-        return Concurrency.Combine(msg.$==0?(data=msg.$0,data.$==1?(response=data.$0,response.indexOf("")!=-1?(responseMsg=response.split(","),((function($1)
+        return Concurrency.Combine(msg.$==0?(data=msg.$0,data.$==1?(responseMsg=data.$0.split(","),((function($1)
         {
          return function($2)
          {
@@ -192,7 +325,34 @@
         }(function(s)
         {
          console.log(s);
-        }))(responseMsg),tweet=Arrays.get(Arrays.get(responseMsg,0).split("\""),3),addTweetToFeed(Arrays.get(Arrays.get(responseMsg,1).split("\""),3),tweet),Concurrency.Zero())):Concurrency.Zero()):(function($1)
+        }))(responseMsg),tweet=Arrays.get(Arrays.get(responseMsg,0).split("\""),3),addTweetToFeed(Arrays.get(Arrays.get(responseMsg,1).split("\""),3),tweet),Concurrency.Zero())):data.$==5?(hashtags=data.$0,(responseMsg$1=hashtags.split(","),((function($1)
+        {
+         return function($2)
+         {
+          return $1("ResponseMSG "+Utils.prettyPrint($2));
+         };
+        }(function(s)
+        {
+         console.log(s);
+        }))(hashtags),tweet$1=Arrays.get(Arrays.get(responseMsg$1,0).split("\""),3),addQueries(Arrays.get(Arrays.get(responseMsg$1,1).split("\""),3),tweet$1),Concurrency.Zero()))):data.$==3?((function($1)
+        {
+         return function($2)
+         {
+          return $1("Success! "+Utils.toSafe($2));
+         };
+        }(function(s)
+        {
+         console.log(s);
+        }))(data.$0),Concurrency.Zero()):data.$==4?((function($1)
+        {
+         return function($2)
+         {
+          return $1("Failure! "+Utils.toSafe($2));
+         };
+        }(function(s)
+        {
+         console.log(s);
+        }))(data.$0),Concurrency.Zero()):(function($1)
         {
          return $1("A message was sent back");
         }(function(s)
@@ -221,21 +381,46 @@
     $0:x
    };
   });
+  userToUnsubTo=Var$1.Create$1("");
   tweetMessage=Var$1.Create$1("");
   userName=Var$1.Create$1("");
-  return Doc.Element("div",[],[Doc.Element("div",[],[Doc.Input([AttrProxy.Create("class","form-control")],userName),Doc.Element("button",[AttrProxy.Create("class","btn btn-primary"),AttrProxy.HandlerImpl("click",function($1)
+  userToSubTo=Var$1.Create$1("");
+  queryHashtags=Var$1.Create$1("");
+  registerBox=Doc.Element("div",[],[Doc.Input([AttrProxy.Create("class","form-control")],userName),Doc.Element("button",[AttrProxy.Create("class","btn btn-primary"),AttrProxy.HandlerImpl("click",function($1)
   {
    return function($2)
    {
     return registerAccount($1,$2);
    };
-  })],[Doc.TextNode("Register")])]),Doc.Element("div",[],[Doc.Input([AttrProxy.Create("class","form-control")],tweetMessage),Doc.Element("button",[AttrProxy.Create("class","btn btn-primary"),AttrProxy.HandlerImpl("click",function($1)
+  })],[Doc.TextNode("Register")])]);
+  tweetBox=Doc.Element("div",[],[Doc.Input([AttrProxy.Create("class","form-control")],tweetMessage),Doc.Element("button",[AttrProxy.Create("class","btn btn-primary"),AttrProxy.HandlerImpl("click",function($1)
   {
    return function($2)
    {
     return postTweet($1,$2);
    };
-  })],[Doc.TextNode("Tweet")])]),messagesHeader,serverMessagesContainer,tweetContainer]);
+  })],[Doc.TextNode("Tweet")])]);
+  subscribeBox=Doc.Element("div",[],[Doc.Input([AttrProxy.Create("class","form-control")],userToSubTo),Doc.Element("button",[AttrProxy.Create("class","btn btn-primary"),AttrProxy.HandlerImpl("click",function($1)
+  {
+   return function($2)
+   {
+    return subscribeToUser($1,$2);
+   };
+  })],[Doc.TextNode("Subscribe")])]);
+  unsubscribeBox=Doc.Element("div",[],[Doc.Input([AttrProxy.Create("class","form-control")],userToUnsubTo),Doc.Element("button",[AttrProxy.Create("class","btn btn-primary"),AttrProxy.HandlerImpl("click",function($1)
+  {
+   return function($2)
+   {
+    return unsubscribeToUser($1,$2);
+   };
+  })],[Doc.TextNode("Unsubscribe")])]);
+  return Doc.Element("div",[],[registerBox,Doc.Element("div",[],[Doc.Input([AttrProxy.Create("class","form-control")],queryHashtags),Doc.Element("button",[AttrProxy.Create("class","btn btn-primary"),AttrProxy.HandlerImpl("click",function($1)
+  {
+   return function($2)
+   {
+    return queryHashtagsFromServer($1,$2);
+   };
+  })],[Doc.TextNode("Query Hashtags")])]),subscribeBox,unsubscribeBox,tweetBox,messagesHeader,serverMessagesContainer,tweetContainer,queryHeader,queryMessagesContainer,queryContainer]);
  };
  SomeRecord.New=function(Name)
  {
@@ -258,11 +443,11 @@
  };
  ClientServer_JsonDecoder.j=function()
  {
-  return ClientServer_JsonDecoder._v?ClientServer_JsonDecoder._v:ClientServer_JsonDecoder._v=(Provider.DecodeUnion(void 0,"$",[[0,[["$0","con",Provider.Id(),0]]],[1,[["$0","tweet",Provider.Id(),0]]],[2,[["$0","register",Provider.Id(),0]]]]))();
+  return ClientServer_JsonDecoder._v?ClientServer_JsonDecoder._v:ClientServer_JsonDecoder._v=(Provider.DecodeUnion(void 0,"$",[[0,[["$0","con",Provider.Id(),0]]],[1,[["$0","tweet",Provider.Id(),0]]],[2,[["$0","register",Provider.Id(),0]]],[3,[["$0","succ",Provider.Id(),0]]],[4,[["$0","fail",Provider.Id(),0]]],[5,[["$0","tweet",Provider.Id(),0]]]]))();
  };
  ClientServer_JsonEncoder.j=function()
  {
-  return ClientServer_JsonEncoder._v?ClientServer_JsonEncoder._v:ClientServer_JsonEncoder._v=(Provider.EncodeUnion(void 0,"$",[[0,[["$0","tweet",Provider.Id(),0]]],[1,[["$0","account",Provider.Id(),0]]]]))();
+  return ClientServer_JsonEncoder._v?ClientServer_JsonEncoder._v:ClientServer_JsonEncoder._v=(Provider.EncodeUnion(void 0,"$",[[0,[["$0","tweet",Provider.Id(),0]]],[1,[["$0","account",Provider.Id(),0]]],[2,[["$0","userToSubTo",Provider.Id(),0]]],[3,[["$0","userToUnsubTo",Provider.Id(),0]]],[4,[["$0","query",Provider.Id(),0]]],[5,[["$0","login",Provider.Id(),0]]],[6,[["$0","logout",Provider.Id(),0]]]]))();
  };
  ClientServer_Templates.body=function(h)
  {
