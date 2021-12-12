@@ -20,6 +20,7 @@ type MessagesToClient =
     | Connection of con : string
     | TweetFromServer of tweet : string
     | RegisteredFromServer of register : string
+    | Success of succ: string
 
 
 [<System.SerializableAttribute>]
@@ -104,7 +105,7 @@ let ServerStart() : StatefulAgent<MessagesToClient, MessagesToServer, int> =
                     guIdAndUserName.Add(clientGuId, account) |> ignore
                     userNameAndGuId.Add(account, clientGuId) |> ignore
                     users.Add(user) |> ignore
-                    do! (writeMessage handleClientMessages (RegisteredFromServer "Registered."))
+                    do! (writeMessage handleClientMessages (RegisteredFromServer "Registered.")) |> Async.Ignore
                 | Tweet msgTweet ->
                     // TODO: Should have a check to make sure user is registed && "logged-in" (not disconnected)
                     let (clientName:string) = guIdAndUserName.[clientGuId]
@@ -132,10 +133,9 @@ let ServerStart() : StatefulAgent<MessagesToClient, MessagesToServer, int> =
                             let userGuId = user.guId
                             printfn "Client ID for user is %s" userGuId
                             // TODO: ?make sure its open
-                            do! sendMessageWithClientId (userGuId) (TweetFromServer(JsonConvert.SerializeObject(tweetToDistribute))) |> Async.Ignore
-                    do! sendMessageWithClientId (clientGuId) (TweetFromServer "Created Tweet") |> Async.Ignore
+                            do! sendMessageWithClientId (userGuId) (TweetFromServer (JsonConvert.SerializeObject(tweetToDistribute))) |> Async.Ignore
+                    do! sendMessageWithClientId (clientGuId) (Success "Created Tweet") |> Async.Ignore
                 return state + 1
-            | Error exn -> return state
-            | Close -> return state
+            
         }
     }
