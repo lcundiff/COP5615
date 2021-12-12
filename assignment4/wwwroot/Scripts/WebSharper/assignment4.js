@@ -41,7 +41,7 @@
    var b;
    Concurrency.StartImmediate((b=null,Concurrency.Delay(function()
    {
-    return Concurrency.Bind((new AjaxRemotingProvider.New()).Async("assignment4:assignment4.Server.Tweet:1689443245",[e.Vars.Hole("texttoreverse").$1.Get()]),function(a)
+    return Concurrency.Bind((new AjaxRemotingProvider.New()).Async("assignment4:assignment4.Server.Tweet:1292829125",[e.Vars.Hole("texttoreverse").$1.Get()]),function(a)
     {
      rvReversed.Set(a);
      return Concurrency.Zero();
@@ -61,7 +61,7 @@
    var b$1;
    Concurrency.StartImmediate((b$1=null,Concurrency.Delay(function()
    {
-    return Concurrency.Bind((new AjaxRemotingProvider.New()).Async("assignment4:assignment4.Server.Tweet:1689443245",[e.Vars.Hole("texttoreverse").$1.Get()]),function(a)
+    return Concurrency.Bind((new AjaxRemotingProvider.New()).Async("assignment4:assignment4.Server.Tweet:1292829125",[e.Vars.Hole("texttoreverse").$1.Get()]),function(a)
     {
      rvReversed.Set(a);
      return Concurrency.Zero();

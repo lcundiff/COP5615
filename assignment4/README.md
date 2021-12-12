@@ -5,7 +5,7 @@
 (net 5 SDK wasn't working for some reason, see debugging for more info)
 also downloaded desktop runtime - https://dotnet.microsoft.com/download/dotnet/thank-you/runtime-desktop-6.0.0-windows-x64-installer
 Visual Studio 2015+ (2022 preview recommended)
-
+Installing WebSharper vsix through Developer PowerShell -> VSIXInstaller.exe location_of_WebSharper.4.7.3.424.vsix
 
 ## How we set up the project
 We based our project from the websharper client-server template: https://github.com/dotnet-websharper/core#helloworld

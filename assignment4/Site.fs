@@ -4,6 +4,9 @@ open WebSharper
 open WebSharper.Sitelets
 open WebSharper.UI
 open WebSharper.UI.Server
+open WebSharper.UI.Next
+open WebSharper.UI.Next.Server
+
 
 type EndPoint =
     | [<EndPoint "/">] Home
@@ -36,10 +39,26 @@ module Site =
     open WebSharper.UI.Html
 
     let HomePage ctx =
+        async {
+            let! login = ctx.UserSession.GetLoggedInUser()
+            let content = match login with 
+                | Some username -> 
+                    div [ 
+                        h1 [] [text "Say Hi to the server!"]
+                        div [] [client <@ Client.Main() @>]
+                    ]
+                | None -> 
+                    divAttr [attr.style "width:300px;"] [
+                        client <@Client.AnonymousUser() @>
+                    ]
+            return Templating.Main ctx Endpoint.Home "Home" [content]
+        }
+        (*
         Templating.Main ctx EndPoint.Home "Home" [
             h1 [] [text "Say Hi to the server!"]
             div [] [client <@ Client.Main() @>]
-        ]
+        ]*)
+        
 
     let AboutPage ctx =
         Templating.Main ctx EndPoint.About "About" [

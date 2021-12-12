@@ -4,6 +4,9 @@ open WebSharper
 open WebSharper.UI
 open WebSharper.UI.Templating
 open WebSharper.UI.Notation
+open WebSharper.UI.Next.Html
+open WebSharper.Forms
+open WebSharper.Forms.Bootstrap
 
 open System
 open System.Collections.Generic
@@ -45,6 +48,28 @@ module Client =
             )
             .Reversed(rvReversed.View)  // Reversed is a var in HTML template
             .Doc()
+
+    let AnonymousUser () = 
+        Form.Return (fun user pass -> {User = user; Pass = pass})
+        <*> (Form.Yield ""
+            |> Validation.IsNotEmpty "Must Enter a Username")
+        <*> (Form.Yield ""
+            |> Validation.IsNotEmpty "Must Enter a Password")
+        |> Form.WithSubmit
+        |> Form.Run( fun userpass ->
+            async {
+                do! Server.LoginUser userpass
+                return JS.Window.Location.Reload()
+                } |> Async.Start
+        )
+        |> Form.Render (fun user pass submit -> 
+            form [
+                Controls.Simple.InputWithError "Username" user submit.View
+                Controls.Simple.InputPasswordWithError "Password" pass submit.View
+                Controls.Button "Log in" [attr. ``class`` "btn btn-primary"] submit.Trigger
+                Controls.ShowErrors [attr.style "margin-top:1em;"] submit.View
+            ]
+        )
 
 [<JavaScript>]
 module ClientFunctions = 

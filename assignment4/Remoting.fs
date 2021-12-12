@@ -12,3 +12,16 @@ module Server =
         async {
             return R input
         }
+
+    [<Rpc>]
+    let LoginUser userpass = 
+        let ctx = Web.Remoting.GetContext() 
+        if userpass.Pass = "correct" then
+            ctx.UserSession.LoginUser(userpass.User, persistent=true) |> Async.Ignore
+        else 
+            async.Return()
+
+    [<Rpc>]
+    let LogoutUser() = 
+        let ctx = Web.Remoting.GetContext()
+        ctx.UserSession.Logout()

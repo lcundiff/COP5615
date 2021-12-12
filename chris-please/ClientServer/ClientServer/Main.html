@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta chartset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <meta name="generator" content="WebSharper" />
+    <meta ws-replace="meta" />
+    <style ws-replace="styles"></style>
+    <title>Twitter clone</title>
+    <style>
+        h2 {
+            margin-top: 0;
+            text-align: center;
+            width: 100%;
+            margin-bottom: 10px;
+        }
+
+        h3 {
+            margin-top: 5px;
+        }
+
+        .user-login-logout {
+            margin-bottom: 10px;
+        }
+
+        .user-login {
+            margin-right: 20px;
+        }
+
+        .retweet-handler {
+            height: 34px !important;
+        }
+
+        input {
+            display: unset !important;
+            border: 1pt solid black;
+            width: 500px !important;
+            height: 38px !important;
+            margin-bottom: 10px;
+            border-radius: 3px;
+        }
+
+        button {
+            border-radius: 3px;
+            margin: 5px;
+            margin-bottom: 5px !important;
+            border: 1pt solid black;
+            width: 168px;
+            height: 38px;
+        }
+
+        .content {
+            text-align: center;
+        }
+
+        ul {
+            border-bottom: 1px solid lightgray;
+            padding-bottom: 30px;
+        }
+
+            ul > li + li {
+                border-top: 1px dotted lightgray;
+            }
+
+        label {
+            width: 100%;
+            font-weight: bold !important;
+        }
+
+        body {
+            padding: 30px;
+        }
+    </style>
+</head>
+<body>
+    <div style="width: 100%">
+        <h2>Twitter Socket Communication</h2>
+        <div id="tasks"></div>
+        <div class="content" ws-hole="Main" ws-children-template="Body">
+            <div ws-replace="WebSocketTest"></div>
+            <div>
+                <a href="${AboutPageLink}">Go to about page</a>
+            </div>
+        </div>
+    </div>
+    <script ws-replace="scripts"></script>
+</body>
+</html>
