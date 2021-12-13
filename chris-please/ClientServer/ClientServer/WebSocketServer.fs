@@ -156,8 +156,10 @@ let ServerStart() : StatefulAgent<MessagesToClient, MessagesToServer, int> =
                     let user = userNameAndUser.[userName]
                     if (user.onlineStatus = 0) then 
                         do! (sendMessageWithClientId (clientGuId) (Failure "You're logged out cannot request messages.")) |> Async.Ignore
-                    else if (query.Length = 0 || query.Length = 1 || (not (string(query.[0]) = "@")) || (not (string(query.[0]) = "#")))
-                    then do! (sendMessageWithClientId (clientGuId) (Failure "Please input a valid query.")) |> Async.Ignore
+                    else if (query.Length = 0 || query.Length = 1)
+                    then do! (sendMessageWithClientId (clientGuId) (Failure "Please input a valid query of length > 1.")) |> Async.Ignore
+                    else if ((not (string(query.[0]) = "@")) && (not (string(query.[0]) = "#")))
+                    then do! (sendMessageWithClientId (clientGuId) (Failure "Must start with an @ or #.")) |> Async.Ignore
                     else 
                         let symbol = string(query.[0])
                         // First part of query is symbol
@@ -280,9 +282,11 @@ let ServerStart() : StatefulAgent<MessagesToClient, MessagesToServer, int> =
                 | Subscribe userToSubTo ->
                     // Subscribe userToSubTo is going to add the sender's userName to userToSubTo's dictionary.
                     let senderUserName = guIdAndUserName.[clientGuId]
-                    let sender = userNameAndUser.[clientGuId]
+                    let sender = userNameAndUser.[senderUserName]
                     if (sender.onlineStatus = 0) then 
                         do! (sendMessageWithClientId (clientGuId) (Failure "You cannot subscribe if you're logged out.")) |> Async.Ignore
+                    else if (not (userNameAndGuId.ContainsKey(userToSubTo))) then
+                        do! (sendMessageWithClientId (clientGuId) (Failure ("No such user @" + userToSubTo))) |> Async.Ignore
                     else 
                         // We don't need to check if our user is key in the dictionary yet since we automatically do that on register.
                         // We do need to check if our userToSubTo already contains sender's UserName though.
@@ -295,12 +299,13 @@ let ServerStart() : StatefulAgent<MessagesToClient, MessagesToServer, int> =
                             subs <- List.append subs [senderUserName]
                             userNamesAndTheirSubscribers.[userToSubTo] <- subs
                             do! sendMessageWithClientId (clientGuId) (Success ("You successfully subscribed to the user: " + userToSubTo)) |> Async.Ignore
-                        
                 | Unsubscribe userToUnsubTo -> 
                     let senderUserName = guIdAndUserName.[clientGuId]
-                    let sender = userNameAndUser.[clientGuId]
+                    let sender = userNameAndUser.[senderUserName]
                     if (sender.onlineStatus = 0) then 
                         do! (sendMessageWithClientId (clientGuId) (Failure "You cannot unsubscribe if you're logged out.")) |> Async.Ignore
+                    else if (not (userNameAndGuId.ContainsKey(userToUnsubTo)))
+                    then do! (sendMessageWithClientId (clientGuId) (Failure ("No such user @" + userToUnsubTo))) |> Async.Ignore
                     else 
                         let mutable subs = userNamesAndTheirSubscribers.[userToUnsubTo]
                     
