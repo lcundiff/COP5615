@@ -36,4 +36,4 @@ type Startup() =
             .UseStaticFiles()
             .Run(fun context ->
                 context.Response.StatusCode <- 404
-                context.Response.WriteAsync("Fell through :("))
+                context.Response.WriteAsync("404 Error :("))

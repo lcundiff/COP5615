@@ -524,7 +524,7 @@
     return registerAccount($1,$2);
    };
   })],[Doc.TextNode("Register")])]);
-  tweetBox=Doc.Element("div",[],[Doc.Input([AttrProxy.Create("class","form-control"),AttrProxy.Create("id","tweetbox"),AttrProxy.Create("disabled","true")],tweetMessage),Doc.Element("button",[AttrProxy.Create("class","btn btn-primary"),AttrProxy.Create("id","tweetbtn"),AttrProxy.Create("disabled","true"),AttrProxy.HandlerImpl("click",function($1)
+  tweetBox=Doc.Element("div",[],[Doc.Input([AttrProxy.Create("class","form-control"),AttrProxy.Create("id","tweetbox"),AttrProxy.Create("disabled","true")],tweetMessage),Doc.Element("button",[AttrProxy.Create("class","btn tweetBox__tweetButton"),AttrProxy.Create("id","tweetbtn"),AttrProxy.Create("disabled","true"),AttrProxy.HandlerImpl("click",function($1)
   {
    return function($2)
    {
@@ -572,7 +572,7 @@
    Name:Name
   };
  };
- Client.Main=function(aboutPageLink,wsep)
+ Client.Main=function(profilePageLink,wsep)
  {
   var b,_this,W,_this$1,p,i;
   return(b=(_this=(W=WebSocketClient.WebSocketTest(wsep),(_this$1=new ProviderBuilder.New$1(),(_this$1.h.push({
@@ -581,8 +581,8 @@
    $1:W
   }),_this$1))),(_this.h.push({
    $:1,
-   $0:"aboutpagelink",
-   $1:aboutPageLink
+   $0:"profilepagelink",
+   $1:profilePageLink
   }),_this)),(p=Handler.CompleteHoles(b.k,b.h,[]),(i=new TemplateInstance.New(p[1],ClientServer_Templates.body(p[0])),b.i=i,i))).get_Doc();
  };
  ClientServer_JsonDecoder.j=function()

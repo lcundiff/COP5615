@@ -31,8 +31,6 @@ type MessagesToClient =
     | MissedTweet of tweet: string
 
 
-
-
 [<System.SerializableAttribute>]
 type Tweet() =
     [<DefaultValue>]

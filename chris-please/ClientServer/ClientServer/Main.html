@@ -5,84 +5,223 @@
     <meta name="viewport" content="width=device-width,initial-scale=1.0" />
     <meta name="generator" content="WebSharper" />
     <meta ws-replace="meta" />
-    <style ws-replace="styles"></style>
-    <title>Twitter clone</title>
+    <link rel="stylesheet" href="twitter.css"></link>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css"
+      integrity="sha512-iBBXm8fW90+nuLcSKlbmrPcLa0OT92xO1BIsZ+ywDWZCvqsWgccV3gFoRBv0z+8dLJgyAHIhR35VZc2oM/gI1w=="
+      crossorigin="anonymous"
+    />
     <style>
-        h2 {
-            margin-top: 0;
-            text-align: center;
-            width: 100%;
-            margin-bottom: 10px;
+        /* Sticky footer styles */
+        html {
+            position: relative;
+            min-height: 100%;
         }
-
-        h3 {
-            margin-top: 5px;
-        }
-
-        .user-login-logout {
-            margin-bottom: 10px;
-        }
-
-        .user-login {
-            margin-right: 20px;
-        }
-
-        .retweet-handler {
-            height: 34px !important;
-        }
-
-        input {
-            display: unset !important;
-            border: 1pt solid black;
-            width: 500px !important;
-            height: 38px !important;
-            margin-bottom: 10px;
-            border-radius: 3px;
-        }
-
-        button {
-            border-radius: 3px;
-            margin: 5px;
-            margin-bottom: 5px !important;
-            border: 1pt solid black;
-            width: 168px;
-            height: 38px;
-        }
-
-        .content {
-            text-align: center;
-        }
-
-        ul {
-            border-bottom: 1px solid lightgray;
-            padding-bottom: 30px;
-        }
-
-            ul > li + li {
-                border-top: 1px dotted lightgray;
-            }
-
-        label {
-            width: 100%;
-            font-weight: bold !important;
-        }
-
         body {
-            padding: 30px;
+            /* Margin bottom by footer height */
+            margin-bottom: 60px;
+        }
+        .footer {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            /* Set the fixed height of the footer here */
+            height: 60px;
+            background-color: #f5f5f5;
+        }
+        .container .text-muted {
+            margin: 20px 0;
         }
     </style>
+    <style ws-replace="styles"></style>
+    <title>Twitter clone</title>
 </head>
 <body>
-    <div style="width: 100%">
-        <h2>Twitter Socket Communication</h2>
-        <div id="tasks"></div>
-        <div class="content" ws-hole="Main" ws-children-template="Body">
-            <div ws-replace="WebSocketTest"></div>
-            <div>
-                <a href="${AboutPageLink}">Go to about page</a>
-            </div>
+
+
+
+    <div class="sidebar" v>
+        <i class="fab fa-twitter"></i>
+        <div class="sidebarOption active">
+          <span class="material-icons"> home </span>
+          <h2>Home</h2>
+        </div>
+  
+        <div class="sidebarOption" ws-hole="MenuBar">
+        </div>
+  
+        <div class="sidebarOption">
+          <span class="material-icons"> notifications_none </span>
+          <h2>Notifications</h2>
+        </div>
+  
+        <div class="sidebarOption">
+          <span class="material-icons"> mail_outline </span>
+          <h2>Messages</h2>
+        </div>
+  
+        <div class="sidebarOption">
+          <span class="material-icons"> bookmark_border </span>
+          <h2>Bookmarks</h2>
+        </div>
+  
+        <div class="sidebarOption">
+          <span class="material-icons"> list_alt </span>
+          <h2>Lists</h2>
+        </div>
+  
+        <div class="sidebarOption">
+          <span class="material-icons"> perm_identity </span>
+          <h2> <a href="${ProfilePageLink}">Profile</a></h2>
+        </div>
+  
+        <div class="sidebarOption">
+          <span class="material-icons"> more_horiz </span>
+          <h2>More</h2>
         </div>
     </div>
-    <script ws-replace="scripts"></script>
+      <!-- sidebar ends -->
+  
+      <!-- feed starts -->
+      <div class="feed">
+        <div class="feed__header">
+          <h2>Home</h2>
+        </div>
+  
+        <!-- tweetbox starts -->
+        <div style="width: 100%" class="tweetBox">
+            <div id="tasks"></div>
+            <div  ws-hole="Main" ws-children-template="Body">
+                    <div ws-replace="WebSocketTest"></div>
+                    <div>
+                        <a href="${ProfilePageLink}">Profile page</a>
+                    </div>
+                <div class="tweetbox__input">                    
+                    <img
+                        src="https://i.pinimg.com/originals/a6/58/32/a65832155622ac173337874f02b218fb.png"
+                        alt=""
+                    />
+                    <input type="text" placeholder="What's happening?" />
+                </div>
+                <button class="tweetBox__tweetButton">Tweet</button>
+                <br />
+            </div>
+        </div>
+        <!-- tweetbox ends -->
+
+        <script ws-replace="scripts"></script>  
+        <!-- post starts -->
+        <div class="post">
+          <div class="post__avatar">
+            <img
+              src="https://i.pinimg.com/originals/a6/58/32/a65832155622ac173337874f02b218fb.png"
+              alt=""
+            />
+          </div>
+  
+          <div class="post__body">
+            <div class="post__header">
+              <div class="post__headerText">
+                <h3>
+                  Somanath Goudar
+                  <span class="post__headerSpecial"
+                    ><span class="material-icons post__badge"> verified </span>@somanathg</span
+                  >
+                </h3>
+              </div>
+              <div class="post__headerDescription">
+                <p>Lorem ipsum, dolor sit amet consectetur adipisicing elit.</p>
+              </div>
+            </div>
+            <img
+              src="https://www.focus2move.com/wp-content/uploads/2020/01/Tesla-Roadster-2020-1024-03.jpg"
+              alt=""
+            />
+            <div class="post__footer">
+              <span class="material-icons"> repeat </span>
+              <span class="material-icons"> favorite_border </span>
+              <span class="material-icons"> publish </span>
+            </div>
+          </div>
+        </div>
+        <!-- post ends -->
+  
+        <!-- post starts -->
+        <div class="post">
+          <div class="post__avatar">
+            <img
+              src="https://i.pinimg.com/originals/a6/58/32/a65832155622ac173337874f02b218fb.png"
+              alt=""
+            />
+          </div>
+  
+          <div class="post__body">
+            <div class="post__header">
+              <div class="post__headerText">
+                <h3>
+                  Somanath Goudar
+                  <span class="post__headerSpecial"
+                    ><span class="material-icons post__badge"> verified </span>@somanathg</span
+                  >
+                </h3>
+              </div>
+              <div class="post__headerDescription">
+                <p>Lorem ipsum, dolor sit amet consectetur adipisicing elit.</p>
+              </div>
+            </div>
+            <img
+              src="https://www.focus2move.com/wp-content/uploads/2020/01/Tesla-Roadster-2020-1024-03.jpg"
+              alt=""
+            />
+            <div class="post__footer">
+              <span class="material-icons"> repeat </span>
+              <span class="material-icons"> favorite_border </span>
+              <span class="material-icons"> publish </span>
+            </div>
+          </div>
+        </div>
+        <!-- post ends -->
+      </div>
+      <!-- feed ends -->
+  
+      <!-- widgets starts -->
+      <div class="widgets">
+        <div class="widgets__input">
+          <span class="material-icons widgets__searchIcon"> search </span>
+          <input type="text" placeholder="Search Twitter" />
+        </div>
+  
+        <div class="widgets__widgetContainer">
+          <h2>What's happening?</h2>
+          <blockquote class="twitter-tweet">
+            <p lang="en" dir="ltr">
+              Sunsets don&#39;t get much better than this one over
+              <a href="https://twitter.com/GrandTetonNPS?ref_src=twsrc%5Etfw">@GrandTetonNPS</a>.
+              <a href="https://twitter.com/hashtag/nature?src=hash&amp;ref_src=twsrc%5Etfw"
+                >#nature</a
+              >
+              <a href="https://twitter.com/hashtag/sunset?src=hash&amp;ref_src=twsrc%5Etfw"
+                >#sunset</a
+              >
+              <a href="http://t.co/YuKy2rcjyU">pic.twitter.com/YuKy2rcjyU</a>
+            </p>
+            &mdash; US Department of the Interior (@Interior)
+            <a href="https://twitter.com/Interior/status/463440424141459456?ref_src=twsrc%5Etfw"
+              >May 5, 2014</a
+            >
+          </blockquote>
+          <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+        </div>
+      </div>
+      <footer class="footer">
+        <div class="container">
+            <p class="text-muted">
+                For an enhanced template that provides automatic GitHub deployment to Azure, fork from <a href="https://github.com/intellifactory/ClientServer.Azure">GitHub</a>, or
+                read more <a href="https://websharper.com/blog-entry/4368/deploying-websharper-apps-to-azure-via-github">here</a>.
+            </p>
+        </div>
+    </footer>
 </body>
 </html>

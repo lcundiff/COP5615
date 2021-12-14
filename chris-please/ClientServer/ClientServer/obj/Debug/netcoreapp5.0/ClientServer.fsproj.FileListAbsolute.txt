@@ -1,0 +1,5 @@
+/home/logancundiff/Documents/GitHub/COP5615/chris-please/ClientServer/ClientServer/obj/Debug/netcoreapp5.0/ClientServer.fsproj.AssemblyReference.cache
+/home/logancundiff/Documents/GitHub/COP5615/chris-please/ClientServer/ClientServer/obj/Debug/netcoreapp5.0/ClientServer.AssemblyInfoInputs.cache
+/home/logancundiff/Documents/GitHub/COP5615/chris-please/ClientServer/ClientServer/obj/Debug/netcoreapp5.0/ClientServer.AssemblyInfo.fs
+/home/logancundiff/Documents/GitHub/COP5615/chris-please/ClientServer/ClientServer/obj/Debug/netcoreapp5.0/ClientServer.MvcApplicationPartsAssemblyInfo.cache
+/home/logancundiff/Documents/GitHub/COP5615/chris-please/ClientServer/ClientServer/obj/Debug/netcoreapp5.0/ClientServer.pdb

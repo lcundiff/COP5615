@@ -297,7 +297,7 @@ let WebSocketTest (endpoint: WebSocketEndpoint<Server.MessagesToClient, Server.M
                     attr.``class`` "form-control"
                     attr.``id`` "register-form"]  userName
                 button [ 
-                    attr.``class`` "btn btn-primary" 
+                    attr.``class`` "tweetBox__tweetButton" 
                     attr.``id`` "register"
                     on.click (registerAccount) ] [ text "Register" ]
             ]
@@ -310,7 +310,7 @@ let WebSocketTest (endpoint: WebSocketEndpoint<Server.MessagesToClient, Server.M
                 attr.``disabled`` "true"] tweetMessage
                 
             button [
-                attr.``class`` "btn btn-primary" 
+                attr.``class`` "tweetBox__tweetButton" 
                 attr.``id`` "tweetbtn"
                 attr.``disabled`` "true"
                 on.click (postTweet) ] [text "Tweet"]
@@ -324,7 +324,7 @@ let WebSocketTest (endpoint: WebSocketEndpoint<Server.MessagesToClient, Server.M
                 attr.``disabled`` "true"] userToSubTo
                 
             button [
-                attr.``class`` "btn btn-primary"
+                attr.``class`` "tweetBox__tweetButton"
                 attr.``id`` "subscribebtn"
                 attr.``disabled`` "true"
 
@@ -338,7 +338,7 @@ let WebSocketTest (endpoint: WebSocketEndpoint<Server.MessagesToClient, Server.M
                 attr.``id`` "unsubscribebox"
                 attr.``disabled`` "true"] userToUnsubTo
             button [
-                attr.``class`` "btn btn-primary"
+                attr.``class`` "tweetBox__tweetButton"
                 attr.``id`` "unsubscribebtn"
                 attr.``disabled`` "true"
                 on.click (unsubscribeToUser) ] [text "Unsubscribe"]
@@ -352,7 +352,7 @@ let WebSocketTest (endpoint: WebSocketEndpoint<Server.MessagesToClient, Server.M
                 attr.``disabled`` "true"] query
                 
             button [
-                attr.``class`` "btn btn-primary"
+                attr.``class`` "tweetBox__tweetButton"
                 attr.``id`` "querybtn"
                 attr.``disabled`` "true"
                 on.click (queryFromServer) ] [text "Query"]
@@ -362,12 +362,12 @@ let WebSocketTest (endpoint: WebSocketEndpoint<Server.MessagesToClient, Server.M
         div [] [
            button [
            
-                attr.``class`` "btn btn-primary"
+                attr.``class`` "tweetBox__tweetButton"
                 attr.``id`` "login"
                 attr.``disabled`` "true"
                 on.click (loginToServer) ] [text "Login"]
            button [
-               attr.``class`` "btn btn-primary"
+               attr.``class`` "tweetBox__tweetButton"
                attr.``id`` "logout"
                attr.``disabled`` "true"
                on.click (logoutOfServer) ] [text "Logout"]

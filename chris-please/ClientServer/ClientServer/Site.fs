@@ -10,6 +10,7 @@ open WebSharper.UI.Html
 open WebSharper.UI.Templating
 
 type IndexTemplate = Template<"Main.html", clientLoad = ClientLoad.FromDocument>
+type LoginTemplate = Template<"login.html", clientLoad = ClientLoad.FromDocument>
 
 [<AbstractClass>]
 type RpcUserSession() =
@@ -21,8 +22,9 @@ type RpcUserSession() =
     abstract Logout : unit -> Async<unit>
 
 type EndPoint =
-    | [<EndPoint "/">] Home
-    | [<EndPoint "/about">] About
+    | [<EndPoint "/">] Login
+    | [<EndPoint "/home">] Home
+    | [<EndPoint "/profile">] Profile
 
 [<JavaScript>]
 type SomeRecord = { Name : string }
@@ -35,12 +37,18 @@ let DoSomething () = async { return { Name = "Yo." } }
 module Client =
     open WebSharper.UI.Client
 
-    let Main (aboutPageLink: string) wsep =
+    let Main (profilePageLink: string) wsep =
         IndexTemplate.Body()
             .WebSocketTest(WebSocketClient.WebSocketTest wsep)
-            .AboutPageLink(aboutPageLink)
+            .ProfilePageLink(profilePageLink)
             .Doc()
 
+
+    let Login (homePageLink: string) wsep =
+        LoginTemplate.Body()
+            .LoginBtn(WebSocketClient.WebSocketLogin wsep)
+            .HomePageLink(homePageLink)
+            .Doc()
 
 open WebSharper.UI.Server
 
@@ -50,12 +58,20 @@ type MyWebsite(logger: ILogger<MyWebsite>) =
     override this.Sitelet = Application.MultiPage(fun (ctx: Context<_>) (ep: EndPoint) ->
         match ep with
         | Home ->
-            let aboutPageLink = ctx.Link About
+            let profilePageLink = ctx.Link Profile
             let wsep = WebSocketClient.MyEndPoint (ctx.RequestUri.ToString())
             IndexTemplate()
-                .Main(client <@ Client.Main aboutPageLink wsep @>)
+                .Main(client <@ Client.Main profilePageLink wsep @>)
                 .Doc()
             |> Content.Page
-        | About ->         
-            Content.Text "This is an about page."
+        | Login -> 
+            let homePageLink = ctx.Link Home
+            let wsep = WebSocketClient.MyEndPoint (ctx.RequestUri.ToString())
+            LoginTemplate()
+                .Login(client <@ Client.Login homePageLink wsep @>)
+                .Doc()
+            |> Content.Page
+
+        | Profile ->         
+            Content.Text "Profile Page"
     )
