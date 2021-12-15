@@ -20,6 +20,7 @@ type MessagesToServer =
     | Query of query: string
     | Login
     | Logout
+    | GetCurrentAccount
 
 type MessagesToClient = 
     | Connection of con : string
@@ -29,6 +30,8 @@ type MessagesToClient =
     | Failure of fail: string
     | QueryFromServer of tweet : string
     | MissedTweet of tweet: string
+    | CurrentAccount of account: string
+
 
 
 [<System.SerializableAttribute>]
@@ -61,6 +64,7 @@ let ServerStart() : StatefulAgent<MessagesToClient, MessagesToServer, int> =
     let mutable userNamesAndTheirSubscribers = new Dictionary<string, string list>()
     let mutable userNamesAndTweetsWithMentions = new Dictionary<string, string list>()
     let mutable hashtagsAndTweetsWithHashtags = new Dictionary<string, string list>()
+    let mutable recentLogin = ""
     // This is just Users.
     let mutable users = new List<User>()
 
@@ -104,8 +108,16 @@ let ServerStart() : StatefulAgent<MessagesToClient, MessagesToServer, int> =
         // for that, we created a lot of dictionaries. 
         let clientGuId = System.Guid.NewGuid().ToString()
         clientGuIdAndWebsocket.Add(clientGuId, handleClientMessages)
+        (* 
+        if(userNameAndUser.ContainsKey("logan")) then 
+            ignore 
+        else 
+            let user = createUser "logan" clientGuId
+            userNameAndUser.Add("logan", user) |> ignore
+            guIdAndUserName.Add(clientGuId, "logan") |> ignore
+            userNamesAndTheirSubscribers.Add("logan", ["logan"])*)
         return 0, fun state msg -> async {
-            printfn "Received message at state: %i from client: %s" state clientGuId
+            printfn "Received message: %A from client: %s" msg clientGuId
             match msg with 
             | Message data ->
                 printfn "It is a message; I have %i users" (users.Count)
@@ -141,6 +153,14 @@ let ServerStart() : StatefulAgent<MessagesToClient, MessagesToServer, int> =
                             do! (sendMessageWithClientId (clientGuId) (MissedTweet (JsonConvert.SerializeObject(tweet)))) |> Async.Ignore      
                         user.twitterFeed <- new List<Tweet>()
                         // Delete all missed tweets after
+                | GetCurrentAccount -> 
+                    if(guIdAndUserName.ContainsKey(clientGuId)) then 
+                        let userName = guIdAndUserName.[clientGuId]
+                        printfn "user login info %s" userName
+                        let user = userNameAndUser.[userName]
+                        do! (sendMessageWithClientId (clientGuId) (CurrentAccount (JsonConvert.SerializeObject(user)))) |> Async.Ignore
+                    else  
+                        do! (sendMessageWithClientId (clientGuId) (Success "User login status checked")) |> Async.Ignore
                 | Logout ->
                     let userName = guIdAndUserName.[clientGuId]
                     let user = userNameAndUser.[userName]

@@ -46,7 +46,7 @@ module Client =
 
     let Login (homePageLink: string) wsep =
         LoginTemplate.Body()
-            .LoginBtn(WebSocketClient.WebSocketLogin wsep)
+            .WebSocketLogin(WebSocketClient.WebSocketLogin wsep)
             .HomePageLink(homePageLink)
             .Doc()
 
@@ -62,7 +62,7 @@ type MyWebsite(logger: ILogger<MyWebsite>) =
             let wsep = WebSocketClient.MyEndPoint (ctx.RequestUri.ToString())
             IndexTemplate()
                 .Main(client <@ Client.Main profilePageLink wsep @>)
-                .Doc()
+                .Doc()  
             |> Content.Page
         | Login -> 
             let homePageLink = ctx.Link Home

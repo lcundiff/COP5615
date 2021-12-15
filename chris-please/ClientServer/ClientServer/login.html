@@ -38,24 +38,35 @@
     <style ws-replace="styles"></style>
     <title>Twitter clone</title>
 </head>
-<body>
-    <div style="width: 100%" class="tweetBox">
-        <div id="tasks"></div>
-        <div  ws-hole="Login" ws-children-template="Body">
-                <div ws-replace="LoginBtn"></div>
-                <div>
-                    <a href="${HomePageLink}">Profile page</a>
-                </div>
-            <div class="tweetbox__input">                    
-                <img
-                    src="https://i.pinimg.com/originals/a6/58/32/a65832155622ac173337874f02b218fb.png"
-                    alt=""
-                />
-                <input type="text" placeholder="What's happening?" />
-            </div>
-            <button class="tweetBox__tweetButton">Tweet</button>
-            <br />
+<body>  
+      <!-- feed starts -->
+      <div class="login_page">
+        <div class="feed__header">
+          <h2>Login</h2>
         </div>
-    </div>
+  
+        <!-- tweetbox starts -->
+        <div style="width: 100%" class="tweetBox">
+            <div id="tasks"></div>
+            <div ws-hole="Login" ws-children-template="Body" class="tweetbox__input">
+                    <div ws-replace="WebSocketLogin"></div>
+                    <div>
+                        <button><a href="${HomePageLink}">Home page</a></button>
+                    </div>
+                <br />
+            </div>
+        </div>
+        <!-- tweetbox ends -->
+        <script ws-replace="scripts"></script>  
+      </div>
+      <!-- feed ends -->
+  
+      <footer class="footer">
+        <div class="container">
+            <p class="text-muted">
+                Twitter Clone By Christopher You and Logan Cundiff
+            </p>
+        </div>
+    </footer>
 </body>
 </html>
