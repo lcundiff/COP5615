@@ -38,14 +38,14 @@
  Provider=ClientSideJson&&ClientSideJson.Provider;
  Client$2=UI&&UI.Client;
  Templates=Client$2&&Client$2.Templates;
- WebSocketClient.WebSocketTest$575$25=Global.id;
- WebSocketClient.WebSocketTest$570$26=Global.id;
- WebSocketClient.WebSocketTest$560$26=Global.id;
- WebSocketClient.WebSocketTest$547$26=Global.id;
- WebSocketClient.WebSocketTest$534$26=Global.id;
- WebSocketClient.WebSocketTest$520$26=Global.id;
- WebSocketClient.WebSocketTest$507$30=Global.id;
- WebSocketClient.WebSocketTest$259$22=function(retweet,msg)
+ WebSocketClient.WebSocketHome$582$25=Global.id;
+ WebSocketClient.WebSocketHome$577$26=Global.id;
+ WebSocketClient.WebSocketHome$567$26=Global.id;
+ WebSocketClient.WebSocketHome$554$26=Global.id;
+ WebSocketClient.WebSocketHome$541$26=Global.id;
+ WebSocketClient.WebSocketHome$527$26=Global.id;
+ WebSocketClient.WebSocketHome$514$30=Global.id;
+ WebSocketClient.WebSocketHome$262$22=function(retweet,msg)
  {
   return function()
   {
@@ -55,7 +55,7 @@
    };
   };
  };
- WebSocketClient.WebSocketTest$239$22=function(retweet,msg)
+ WebSocketClient.WebSocketHome$242$22=function(retweet,msg)
  {
   return function()
   {
@@ -65,7 +65,7 @@
    };
   };
  };
- WebSocketClient.WebSocketTest$214$22=function(retweet,msg)
+ WebSocketClient.WebSocketHome$217$22=function(retweet,msg)
  {
   return function()
   {
@@ -75,7 +75,7 @@
    };
   };
  };
- WebSocketClient.WebSocketTest=function(endpoint)
+ WebSocketClient.WebSocketHome=function(endpoint)
  {
   var server,serverMessagesContainer,messagesHeader,queryMessagesContainer,queryHeader,tweetContainer,queryContainer,queryRequested,userName,connectToServer,b,b$1,userToUnsubTo,tweetMessage,userToSubTo,query,registerBox,tweetBox,subscribeBox,unsubscribeBox,queryHashtagsBox;
   function retweet(msg)
@@ -141,10 +141,14 @@
   }
   function enableFunctionality()
   {
-   var btn,tweetBox$1,subscribeBox$1,unsubscribeBox$1,queryBox,tweetBtn,subscribeBtn,unsubscribeBtn,queryBtn;
+   var btn,loginbtn,logoutbtn,tweetBox$1,subscribeBox$1,unsubscribeBox$1,queryBox,tweetBtn,subscribeBtn,unsubscribeBtn,queryBtn;
    btn=self.document.getElementById("register");
    btn.innerHTML="Account Registered";
-   btn.setAttribute("disabled","true");
+   btn.setAttribute("style","display:none");
+   loginbtn=self.document.getElementById("login");
+   logoutbtn=self.document.getElementById("logout");
+   loginbtn.removeAttribute("style");
+   logoutbtn.removeAttribute("style");
    userName.Set("Welcome to Twitter, @"+userName.Get());
    self.document.getElementById("register-form").setAttribute("disabled","true");
    self.document.getElementById("logout").removeAttribute("disabled");
@@ -321,9 +325,8 @@
     subscribeBtn.removeAttribute("disabled");
     unsubscribeBtn.removeAttribute("disabled");
     queryBtn.removeAttribute("disabled");
-    loginbtn.removeAttribute("style");
-    logoutbtn.removeAttribute("style");
-    loginbtn.setAttribute("disabled","true");
+    loginbtn.setAttribute("style","display:none");
+    logoutbtn.setAttribute("style","display:block");
     return Concurrency.Zero();
    })),null);
   }
@@ -547,7 +550,7 @@
   tweetMessage=Var$1.Create$1("");
   userToSubTo=Var$1.Create$1("");
   query=Var$1.Create$1("");
-  registerBox=Doc.Element("div",[],[Doc.Input([AttrProxy.Create("class","form-control"),AttrProxy.Create("id","register-form")],userName),Doc.Element("button",[AttrProxy.Create("class","tweetBox__tweetButton"),AttrProxy.Create("id","register"),AttrProxy.HandlerImpl("click",function($1)
+  registerBox=Doc.Element("div",[],[Doc.Input([AttrProxy.Create("class","form-control"),AttrProxy.Create("id","register-form")],userName),Doc.Element("button",[AttrProxy.Create("class","tweetBox__tweetButton"),AttrProxy.Create("id","register"),AttrProxy.Create("style","display:block"),AttrProxy.HandlerImpl("click",function($1)
   {
    return function($2)
    {
@@ -596,9 +599,9 @@
    };
   })],[Doc.TextNode("Logout")])]),queryHashtagsBox,subscribeBox,unsubscribeBox,tweetBox,messagesHeader,serverMessagesContainer,tweetContainer,queryHeader,queryMessagesContainer,queryContainer]);
  };
- WebSocketClient.WebSocketLogin$163$30=Global.id;
- WebSocketClient.WebSocketLogin$151$25=Global.id;
- WebSocketClient.WebSocketLogin$145$26=Global.id;
+ WebSocketClient.WebSocketLogin$166$30=Global.id;
+ WebSocketClient.WebSocketLogin$154$25=Global.id;
+ WebSocketClient.WebSocketLogin$148$26=Global.id;
  WebSocketClient.WebSocketLogin=function(endpoint)
  {
   var server,userName,connectToServer,b,logButtons,registerBox,b$1;
@@ -670,11 +673,14 @@
   }
   function enableFunctionality()
   {
-   var btn;
+   var btn,loginbtn,logoutbtn;
    btn=self.document.getElementById("register");
    btn.innerHTML="Account Registered";
    btn.setAttribute("disabled","true");
-   btn.setAttribute("style","display:none");
+   loginbtn=self.document.getElementById("login");
+   logoutbtn=self.document.getElementById("logout");
+   loginbtn.removeAttribute("style");
+   logoutbtn.removeAttribute("style");
    self.document.getElementById("logout").setAttribute("style","display:block");
    userName.Set("Welcome to Twitter, @"+userName.Get());
    self.document.getElementById("register-form").setAttribute("disabled","true");
@@ -877,9 +883,9 @@
  Client.Main=function(profilePageLink,wsep)
  {
   var b,_this,W,_this$1,p,i;
-  return(b=(_this=(W=WebSocketClient.WebSocketTest(wsep),(_this$1=new ProviderBuilder.New$1(),(_this$1.h.push({
+  return(b=(_this=(W=WebSocketClient.WebSocketHome(wsep),(_this$1=new ProviderBuilder.New$1(),(_this$1.h.push({
    $:0,
-   $0:"websockettest",
+   $0:"websockethome",
    $1:W
   }),_this$1))),(_this.h.push({
    $:1,

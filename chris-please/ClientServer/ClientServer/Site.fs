@@ -22,8 +22,8 @@ type RpcUserSession() =
     abstract Logout : unit -> Async<unit>
 
 type EndPoint =
-    | [<EndPoint "/">] Login
-    | [<EndPoint "/home">] Home
+    | [<EndPoint "/">] Home
+    | [<EndPoint "/login">] Login
     | [<EndPoint "/profile">] Profile
 
 [<JavaScript>]
@@ -39,7 +39,7 @@ module Client =
 
     let Main (profilePageLink: string) wsep =
         IndexTemplate.Body()
-            .WebSocketTest(WebSocketClient.WebSocketTest wsep)
+            .WebSocketHome(WebSocketClient.WebSocketHome wsep)
             .ProfilePageLink(profilePageLink)
             .Doc()
 

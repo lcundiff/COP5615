@@ -80,7 +80,10 @@ let WebSocketLogin (endpoint: WebSocketEndpoint<Server.MessagesToClient, Server.
         let btn = JS.Document.GetElementById("register")
         btn.InnerHTML <- "Account Registered"
         btn.SetAttribute("disabled", "true")
-        btn.SetAttribute("style", "display:none")
+        let loginbtn = JS.Document.GetElementById("login")
+        let logoutbtn = JS.Document.GetElementById("logout")
+        loginbtn.RemoveAttribute("style")
+        logoutbtn.RemoveAttribute("style")
         let logoutbtn = JS.Document.GetElementById("logout")
         logoutbtn.SetAttribute("style", "display:block")
         userName.Value <- ("Welcome to Twitter, @" + userName.Value)
@@ -184,7 +187,7 @@ let WebSocketLogin (endpoint: WebSocketEndpoint<Server.MessagesToClient, Server.
         ]
 
 [<JavaScript>]
-let WebSocketTest (endpoint: WebSocketEndpoint<Server.MessagesToClient, Server.MessagesToServer>) = 
+let WebSocketHome (endpoint: WebSocketEndpoint<Server.MessagesToClient, Server.MessagesToServer>) = 
     // Check on this
     let mutable server: WebSocketServer<Server.MessagesToClient, MessagesToServer> option = None
 
@@ -275,7 +278,13 @@ let WebSocketTest (endpoint: WebSocketEndpoint<Server.MessagesToClient, Server.M
     let enableFunctionality () = 
         let btn = JS.Document.GetElementById("register")
         btn.InnerHTML <- "Account Registered"
-        btn.SetAttribute("disabled", "true")
+        btn.SetAttribute("style", "display:none")
+
+        let loginbtn = JS.Document.GetElementById("login")
+        let logoutbtn = JS.Document.GetElementById("logout")
+        loginbtn.RemoveAttribute("style")
+        logoutbtn.RemoveAttribute("style")
+
         userName.Value <- ("Welcome to Twitter, @" + userName.Value)
         let form = JS.Document.GetElementById("register-form")
         form.SetAttribute("disabled", "true")
@@ -441,10 +450,8 @@ let WebSocketTest (endpoint: WebSocketEndpoint<Server.MessagesToClient, Server.M
             unsubscribeBtn.RemoveAttribute("disabled")
             queryBtn.RemoveAttribute("disabled")
 
-
-            loginbtn.RemoveAttribute("style")
-            logoutbtn.RemoveAttribute("style")
-            loginbtn.SetAttribute("disabled", "true")
+            loginbtn.SetAttribute("style", "display:none")
+            logoutbtn.SetAttribute("style", "display:block")
         }
 
         |> Async.Start
@@ -470,7 +477,6 @@ let WebSocketTest (endpoint: WebSocketEndpoint<Server.MessagesToClient, Server.M
             subscribeBtn.SetAttribute("disabled", "true")
             unsubscribeBtn.SetAttribute("disabled", "true")
             queryBtn.SetAttribute("disabled", "true")
-
 
             loginbtn.SetAttribute("style", "display:block")
             logoutbtn.SetAttribute("style", "display:none")
@@ -504,6 +510,7 @@ let WebSocketTest (endpoint: WebSocketEndpoint<Server.MessagesToClient, Server.M
                 button [ 
                     attr.``class`` "tweetBox__tweetButton" 
                     attr.``id`` "register"
+                    attr.``style`` "display:block"
                     on.click (registerAccount) ] [ text "Register" ]
             ]
 
