@@ -31,3 +31,8 @@ The command is: **dotnet build -v d**
 This could also be helpful for installing .NET tool versions from command line: https://stackoverflow.com/questions/68112732/the-framework-microsoft-netcore-app-version-5-was-not-found-while-microsoft
 ### .NET version 5.0 not found 
 This github issue shows this issue can be fixed by setting target framework to .NET 6. This doesn't really make sense, but it's what we did. 
+
+### Project requirements for class: 
+You need to design a JSON based API that  represents all messages and their replies (including errors)
+You need to re-write parts of your engine using WebSharper to implement the WebSocket interface
+You need to re-write parts of your client to use WebSockets.
